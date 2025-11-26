@@ -43,6 +43,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from template_sense.extraction.table_candidates import TableCandidateBlock
+
 # Set up module logger
 logger = logging.getLogger(__name__)
 
@@ -537,24 +539,93 @@ def _create_block_from_cluster(
     )
 
 
+def _get_table_excluded_rows(
+    grid: list[list[Any]], table_blocks: list[TableCandidateBlock]
+) -> set[int]:
+    """
+    Identify which rows are NOT part of any table block.
+
+    This is used for table exclusion approach: all non-table rows are
+    potential header/metadata candidates.
+
+    Args:
+        grid: 2D list of cell values
+        table_blocks: List of detected table blocks to exclude
+
+    Returns:
+        Set of 1-based row indices that are not part of any table block
+        and are not empty rows.
+
+    Example:
+        >>> grid = [["Header"], [None], ["Item", 10], ["Widget", 20], [None], ["Footer"]]
+        >>> table_blocks = [TableCandidateBlock(row_start=3, row_end=4, ...)]
+        >>> _get_table_excluded_rows(grid, table_blocks)
+        {1, 6}  # Rows 1 and 6 are not in table and not empty
+    """
+    # Start with all row indices
+    all_rows = set(range(1, len(grid) + 1))
+
+    # Remove rows that are part of table blocks
+    table_rows = set()
+    for block in table_blocks:
+        for row_idx in range(block.row_start, block.row_end + 1):
+            table_rows.add(row_idx)
+
+    non_table_rows = all_rows - table_rows
+
+    # Remove empty rows (all None or "")
+    non_empty_non_table_rows = set()
+    for row_idx in non_table_rows:
+        # Convert to 0-based index for grid access
+        grid_row_idx = row_idx - 1
+        if grid_row_idx < len(grid):
+            row = grid[grid_row_idx]
+            # Check if row has any non-empty cells
+            if any(cell not in (None, "") for cell in row):
+                non_empty_non_table_rows.add(row_idx)
+
+    logger.debug(
+        "Table exclusion: %d total rows, %d table rows, %d non-table non-empty rows",
+        len(grid),
+        len(table_rows),
+        len(non_empty_non_table_rows),
+    )
+
+    return non_empty_non_table_rows
+
+
 def detect_header_candidate_blocks(
-    grid: list[list[Any]], min_score: float = 0.3, max_gap: int = 2
+    grid: list[list[Any]],
+    min_score: float = 0.3,
+    max_gap: int = 2,
+    table_blocks: list[TableCandidateBlock] | None = None,
 ) -> list[HeaderCandidateBlock]:
     """
     Main entry point for detecting invoice metadata blocks in a grid.
 
     This function orchestrates the entire header detection pipeline:
-    1. Scan all rows for header-like patterns
-    2. Cluster high-scoring rows into distinct blocks
-    3. Return structured HeaderCandidateBlock instances
+    1. If table_blocks provided: Use table exclusion approach (all non-table rows)
+    2. Otherwise: Scan all rows for header-like patterns using scoring heuristics
+    3. Cluster high-scoring rows into distinct blocks
+    4. Return structured HeaderCandidateBlock instances
 
     Important: This function scans the ENTIRE grid, not just the top rows.
     It can detect multiple header blocks (e.g., shipper, consignee, billing info).
 
+    Table Exclusion Approach (when table_blocks provided):
+    - More comprehensive: Won't miss metadata that doesn't match scoring patterns
+    - Field-agnostic: No need to predict what metadata looks like
+    - Complete coverage: Captures ALL non-table content for AI processing
+    - Use this when you've already detected tables using detect_table_candidate_blocks()
+
     Args:
         grid: 2D list of cell values (list of rows)
-        min_score: Minimum score threshold for header candidates (0.0-1.0). Default: 0.5
+        min_score: Minimum score threshold for header candidates (0.0-1.0). Default: 0.3
+                   Ignored when table_blocks is provided (all non-table rows are used).
         max_gap: Maximum row gap for clustering blocks. Default: 2
+        table_blocks: Optional list of table blocks to exclude from header detection.
+                      If provided, uses table exclusion approach instead of scoring.
+                      Default: None (uses scoring heuristics).
 
     Returns:
         List of HeaderCandidateBlock instances, sorted by row_start (top to bottom).
@@ -563,16 +634,20 @@ def detect_header_candidate_blocks(
     Raises:
         ValueError: If min_score is not in range 0.0-1.0
 
-    Example:
+    Example (scoring approach - backward compatible):
         >>> from template_sense.extraction.sheet_extractor import extract_raw_grid
         >>> grid = extract_raw_grid(workbook, "Sheet1")
         >>> blocks = detect_header_candidate_blocks(grid)
         >>> print(f"Found {len(blocks)} header blocks")
         Found 2 header blocks
-        >>> for block in blocks:
-        ...     print(f"Block at R{block.row_start}:R{block.row_end}, score={block.score:.2f}")
-        Block at R1:R3, score=0.75
-        Block at R1:R3, score=0.65
+
+    Example (table exclusion approach - enhanced):
+        >>> from template_sense.extraction.table_candidates import detect_table_candidate_blocks
+        >>> grid = extract_raw_grid(workbook, "Sheet1")
+        >>> table_blocks = detect_table_candidate_blocks(grid)
+        >>> header_blocks = detect_header_candidate_blocks(grid, table_blocks=table_blocks)
+        >>> print(f"Found {len(header_blocks)} header blocks")
+        Found 3 header blocks
     """
     # Validate inputs
     if not 0.0 <= min_score <= 1.0:
@@ -582,19 +657,46 @@ def detect_header_candidate_blocks(
         logger.info("Grid is empty, returning no header blocks")
         return []
 
-    logger.info(
-        "Detecting header candidate blocks in grid (%d rows, min_score=%.2f, max_gap=%d)",
-        len(grid),
-        min_score,
-        max_gap,
-    )
+    # Determine which approach to use
+    if table_blocks is not None:
+        logger.info(
+            "Detecting header candidate blocks using table exclusion approach "
+            "(%d rows, %d table blocks, max_gap=%d)",
+            len(grid),
+            len(table_blocks),
+            max_gap,
+        )
 
-    # Step 1: Find candidate rows
-    scored_rows = find_header_candidate_rows(grid, min_score=min_score)
+        # Step 1: Get non-table rows
+        non_table_rows = _get_table_excluded_rows(grid, table_blocks)
 
-    if not scored_rows:
-        logger.info("No header candidate rows found")
-        return []
+        if not non_table_rows:
+            logger.info("No non-table rows found")
+            return []
+
+        # Step 2: Create scored rows with score=1.0 for all non-table rows
+        # (we're not using scoring in table exclusion approach)
+        scored_rows = [(row_idx, 1.0) for row_idx in sorted(non_table_rows)]
+
+        logger.info(
+            "Table exclusion: identified %d non-table rows as header candidates",
+            len(scored_rows),
+        )
+    else:
+        logger.info(
+            "Detecting header candidate blocks using scoring heuristics "
+            "(%d rows, min_score=%.2f, max_gap=%d)",
+            len(grid),
+            min_score,
+            max_gap,
+        )
+
+        # Step 1: Find candidate rows using scoring
+        scored_rows = find_header_candidate_rows(grid, min_score=min_score)
+
+        if not scored_rows:
+            logger.info("No header candidate rows found")
+            return []
 
     # Step 2: Cluster into blocks
     blocks = cluster_header_candidate_blocks(grid, scored_rows, max_gap=max_gap)
