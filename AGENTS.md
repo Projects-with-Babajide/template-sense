@@ -1,4 +1,4 @@
-# Template Sense — Claude Project Context Document
+# Template Sense — Agent Collaboration Guide
 
 **Version:** 1.0
 **Last Updated:** 2025-11-25
@@ -795,9 +795,23 @@ TEMPLATE_SENSE_LOG_LEVEL=INFO
 ## 11. Contact and Support
 
 **Primary Maintainer:** Babajide (Tako AI Enablement Team)
-**Repository:** [Link to GitHub repo once created]
-**Linear Workspace:** Projects with Babajide → Agentic Team
-**Project:** Tako AI Enablement
+**Repository:** https://github.com/Projects-with-Babajide/template-sense
+**Linear Workspace:** Projects with Babajide
+**Linear Team:** Agentic Team
+**Linear Project:** Tako AI Enablement
+
+**Linear Integration Details for Agents:**
+- **Team Name:** `Agentic Team` (use this exact name when filtering issues)
+- **Project Name:** `Tako AI Enablement` (use this exact name when filtering issues)
+- **Issue Pattern:** `BAT-{number}` (e.g., BAT-12, BAT-15)
+- When starting work on a Linear issue:
+  1. Fetch the issue using Linear MCP integration
+  2. Extract the `gitBranchName` field
+  3. Create/checkout that exact branch
+  4. Update status to "In Progress"
+  5. Complete the work following CLAUDE.md guidelines
+  6. Update status to "Done"
+  7. Add a completion comment
 
 **For Questions:**
 - Refer to this document first
