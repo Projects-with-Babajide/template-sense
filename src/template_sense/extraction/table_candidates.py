@@ -187,11 +187,12 @@ def score_row_as_table_candidate(row: list[Any], row_index: int) -> float:
     Scoring criteria (all field-agnostic):
     - High cell density (>70% filled) → +0.4 (tables are dense)
     - High numeric density (>40% numeric) → +0.3 to +0.5 (tables have numbers)
+    - Text-heavy + dense (>70% text + >70% filled) → +0.4 (likely table headers)
     - Short cell values (avg < 30 chars) → +0.2 (table cells are concise)
-    - No key-value patterns → +0.2 (distinguishes from headers)
+    - No key-value patterns → +0.2 (distinguishes from metadata)
     - Moderate density (30-70% filled) → +0.2
     - Very sparse rows (<30% filled) → -0.3 (likely metadata)
-    - Key-value patterns present → -0.4 (likely headers)
+    - Key-value patterns present → -0.4 (likely metadata headers)
 
     Args:
         row: List of cell values (Any type: str, int, float, datetime, None, etc.)
@@ -234,6 +235,13 @@ def score_row_as_table_candidate(row: list[Any], row_index: int) -> float:
     elif numeric_density > 0.4:
         score += 0.3
         pattern_details.append("moderate_numeric")
+
+    # Heuristic 2.5: Text-heavy dense rows (likely table headers)
+    # Table headers are text-heavy but should still be included in table blocks
+    text_density = 1.0 - numeric_density
+    if text_density > 0.7 and cell_density > 0.7:
+        score += 0.4
+        pattern_details.append("text_header_candidate")
 
     # Heuristic 3: Short cell values (table cells are concise)
     if avg_cell_length < 30:
@@ -361,6 +369,33 @@ def cluster_table_blocks(
         # If consecutive (next row), add to current cluster
         if row_idx == last_row_idx + 1:
             current_cluster.append((row_idx, score))
+        # If gap of 1 row and current cluster is small (1-2 rows), check if it's a header
+        # followed by data rows - if so, skip the gap and continue clustering
+        elif row_idx == last_row_idx + 2 and len(current_cluster) <= 2:
+            # Check if this starts a longer sequence
+            # Look ahead to see if there are more consecutive rows after this one
+            next_indices = [r[0] for r in sorted_rows[sorted_rows.index((row_idx, score)) :]]
+            has_consecutive_after = len(next_indices) >= 2 and next_indices[1] == row_idx + 1
+
+            if has_consecutive_after:
+                # Include the current row, bridging the gap
+                current_cluster.append((row_idx, score))
+                logger.debug(
+                    "Bridging 1-row gap from R%d to R%d (potential header-data separation)",
+                    last_row_idx,
+                    row_idx,
+                )
+            else:
+                # Regular non-consecutive handling
+                if len(current_cluster) >= min_consecutive:
+                    blocks.append(_create_table_block_from_cluster(grid, current_cluster))
+                else:
+                    logger.debug(
+                        "Discarding cluster of %d rows (below min_consecutive=%d)",
+                        len(current_cluster),
+                        min_consecutive,
+                    )
+                current_cluster = [(row_idx, score)]
         else:
             # Non-consecutive: finalize current cluster if it meets minimum
             if len(current_cluster) >= min_consecutive:
