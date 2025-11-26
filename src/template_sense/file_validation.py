@@ -21,10 +21,11 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
+from template_sense.constants import SUPPORTED_FILE_EXTENSIONS
 from template_sense.errors import FileValidationError, UnsupportedFileTypeError
 
 # Supported file types
-SUPPORTED_EXCEL_EXTENSIONS = {".xlsx", ".xls"}
+SUPPORTED_EXCEL_EXTENSIONS = set(SUPPORTED_FILE_EXTENSIONS)  # Convert to set for fast membership testing
 SUPPORTED_MIME_TYPES = {
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # .xlsx
     "application/vnd.ms-excel",  # .xls
