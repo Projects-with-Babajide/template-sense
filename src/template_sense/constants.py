@@ -20,11 +20,14 @@ SUPPORTED_FILE_EXTENSIONS = (".xlsx", ".xls")  # Canonical source - tuple for im
 
 # Extraction limits
 DEFAULT_MAX_HEADER_ROWS = 50  # Maximum rows to scan for headers
-DEFAULT_MIN_TABLE_ROWS = 3  # Minimum rows to qualify as a table
+DEFAULT_MIN_TABLE_ROWS = 3  # Minimum consecutive rows to qualify as a table
 
 # Confidence thresholds
 DEFAULT_CONFIDENCE_THRESHOLD = 0.7  # Heuristic/AI confidence (0.0-1.0)
 DEFAULT_AUTO_MAPPING_THRESHOLD = 80.0  # Fuzzy match score for auto-mapping (0.0-100.0)
+
+# Table detection thresholds
+DEFAULT_TABLE_MIN_SCORE = 0.5  # Minimum score for table candidate rows (0.0-1.0)
 
 # AI timeouts
 DEFAULT_AI_TIMEOUT_SECONDS = 30  # Timeout per AI request
@@ -60,6 +63,7 @@ __all__ = [
     "DEFAULT_MIN_TABLE_ROWS",
     "DEFAULT_CONFIDENCE_THRESHOLD",
     "DEFAULT_AUTO_MAPPING_THRESHOLD",
+    "DEFAULT_TABLE_MIN_SCORE",
     "DEFAULT_AI_TIMEOUT_SECONDS",
     "MIN_GRID_ROWS",
     "MIN_GRID_COLUMNS",
