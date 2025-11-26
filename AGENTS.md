@@ -154,7 +154,7 @@ Fuzzy matched → CanonicalTemplate → Normalized JSON
 ```
 
 **Validation Rules:**
-- Must be `.xlsx` format
+- Must be `.xlsx` or `.xls` format (Excel files only)
 - Grid must have at least 1 row and 1 column
 - Confidence thresholds: 0.0–1.0 (heuristic/AI), 0.0–100.0 (fuzzy match)
 - Recommended auto-mapping threshold: 80.0
