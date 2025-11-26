@@ -53,12 +53,15 @@ def extract_raw_grid(workbook: ExcelWorkbook, sheet_name: str) -> list[list[Any]
     All cell values are Python primitives (str, int, float, None, datetime, etc.)
     with no openpyxl objects.
 
+    IMPORTANT: Hidden rows and columns are automatically excluded from the grid.
+
     Args:
         workbook: ExcelWorkbook instance to extract from
         sheet_name: Name of the sheet to extract
 
     Returns:
         2D list of cell values (list of rows). Empty list if sheet is empty.
+        Hidden rows are excluded. Hidden columns are excluded from each row.
 
     Raises:
         ExtractionError: If sheet_name does not exist or extraction fails
@@ -71,14 +74,45 @@ def extract_raw_grid(workbook: ExcelWorkbook, sheet_name: str) -> list[list[Any]
     logger.debug("Extracting raw grid from sheet '%s'", sheet_name)
 
     try:
+        # Get hidden rows and columns
+        hidden_rows = workbook.get_hidden_rows(sheet_name)
+        hidden_cols = workbook.get_hidden_columns(sheet_name)
+
         # Use workbook.iter_rows to get all rows
         # This already returns primitive values, not Cell objects
-        grid = list(workbook.iter_rows(sheet_name))
+        all_rows = list(workbook.iter_rows(sheet_name))
+
+        # Filter out hidden rows and hidden columns
+        grid = []
+        for row_idx, row in enumerate(all_rows, start=1):
+            # Skip hidden rows
+            if row_idx in hidden_rows:
+                logger.debug("Skipping hidden row %d", row_idx)
+                continue
+
+            # Filter out hidden columns from this row
+            if hidden_cols:
+                # Convert column indices to letters to check if hidden
+                from openpyxl.utils import get_column_letter
+
+                filtered_row = []
+                for col_idx, cell_value in enumerate(row, start=1):
+                    col_letter = get_column_letter(col_idx)
+                    if col_letter not in hidden_cols:
+                        filtered_row.append(cell_value)
+                    else:
+                        logger.debug("Skipping hidden column %s in row %d", col_letter, row_idx)
+                grid.append(filtered_row)
+            else:
+                # No hidden columns, use row as-is
+                grid.append(row)
 
         logger.info(
-            "Extracted raw grid from sheet '%s': %d rows",
+            "Extracted raw grid from sheet '%s': %d rows (excluded %d hidden rows, %d hidden columns)",
             sheet_name,
             len(grid),
+            len(hidden_rows),
+            len(hidden_cols),
         )
         return grid
 

@@ -257,6 +257,102 @@ class ExcelWorkbook:
         logger.debug("Sheet '%s' has %d columns", sheet_name, col_count)
         return col_count
 
+    def is_row_hidden(self, sheet_name: str, row_num: int) -> bool:
+        """
+        Check if a specific row is hidden.
+
+        Args:
+            sheet_name: Name of the sheet
+            row_num: Row number (1-based, Excel convention)
+
+        Returns:
+            True if row is hidden, False otherwise
+
+        Raises:
+            ExtractionError: If sheet_name does not exist
+        """
+        if sheet_name not in self._workbook.sheetnames:
+            raise ExtractionError(
+                extraction_type="sheet",
+                reason=f"Sheet '{sheet_name}' does not exist",
+            )
+
+        sheet = self._workbook[sheet_name]
+        return sheet.row_dimensions[row_num].hidden
+
+    def is_column_hidden(self, sheet_name: str, col_letter: str) -> bool:
+        """
+        Check if a specific column is hidden.
+
+        Args:
+            sheet_name: Name of the sheet
+            col_letter: Column letter (e.g., 'A', 'B', 'C')
+
+        Returns:
+            True if column is hidden, False otherwise
+
+        Raises:
+            ExtractionError: If sheet_name does not exist
+        """
+        if sheet_name not in self._workbook.sheetnames:
+            raise ExtractionError(
+                extraction_type="sheet",
+                reason=f"Sheet '{sheet_name}' does not exist",
+            )
+
+        sheet = self._workbook[sheet_name]
+        return sheet.column_dimensions[col_letter].hidden
+
+    def get_hidden_rows(self, sheet_name: str) -> set[int]:
+        """
+        Get all hidden row numbers in a sheet.
+
+        Args:
+            sheet_name: Name of the sheet
+
+        Returns:
+            Set of hidden row numbers (1-based)
+
+        Raises:
+            ExtractionError: If sheet_name does not exist
+        """
+        if sheet_name not in self._workbook.sheetnames:
+            raise ExtractionError(
+                extraction_type="sheet",
+                reason=f"Sheet '{sheet_name}' does not exist",
+            )
+
+        sheet = self._workbook[sheet_name]
+        hidden_rows = {row for row in sheet.row_dimensions if sheet.row_dimensions[row].hidden}
+        logger.debug("Found %d hidden rows in sheet '%s'", len(hidden_rows), sheet_name)
+        return hidden_rows
+
+    def get_hidden_columns(self, sheet_name: str) -> set[str]:
+        """
+        Get all hidden column letters in a sheet.
+
+        Args:
+            sheet_name: Name of the sheet
+
+        Returns:
+            Set of hidden column letters (e.g., {'L', 'M'})
+
+        Raises:
+            ExtractionError: If sheet_name does not exist
+        """
+        if sheet_name not in self._workbook.sheetnames:
+            raise ExtractionError(
+                extraction_type="sheet",
+                reason=f"Sheet '{sheet_name}' does not exist",
+            )
+
+        sheet = self._workbook[sheet_name]
+        hidden_cols = {
+            col for col in sheet.column_dimensions if sheet.column_dimensions[col].hidden
+        }
+        logger.debug("Found %d hidden columns in sheet '%s'", len(hidden_cols), sheet_name)
+        return hidden_cols
+
     def close(self) -> None:
         """
         Close the underlying workbook to free resources.
