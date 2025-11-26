@@ -79,18 +79,27 @@ class ExcelWorkbook:
 
     def get_sheet_names(self) -> list[str]:
         """
-        Get list of all sheet names in the workbook.
+        Get list of all visible sheet names in the workbook.
+
+        Hidden sheets are excluded from the returned list.
 
         Returns:
-            List of sheet names in the order they appear in the workbook
+            List of visible sheet names in the order they appear in the workbook
 
         Example:
             >>> wb.get_sheet_names()
             ['Sheet1', 'Invoice', 'Summary']
         """
-        sheet_names = self._workbook.sheetnames
-        logger.debug("Retrieved %d sheet names", len(sheet_names))
-        return sheet_names
+        # Filter out hidden sheets
+        visible_sheets = [
+            sheet.title for sheet in self._workbook.worksheets if sheet.sheet_state != "hidden"
+        ]
+        logger.debug(
+            "Retrieved %d visible sheet names (total sheets: %d)",
+            len(visible_sheets),
+            len(self._workbook.sheetnames),
+        )
+        return visible_sheets
 
     def iter_rows(
         self,
