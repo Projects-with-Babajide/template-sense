@@ -62,9 +62,13 @@ Plan and implement a Linear ticket following the Template Sense project workflow
    - Update todos as you progress (mark in_progress, then completed)
 
 9. **Validate implementation:**
-   - Run code quality tools as needed
-   - Run tests if applicable
+   - Run ALL tests: `pytest tests/ -v`
+   - Verify all tests pass
+   - Run code quality tools:
+     - `black .` (auto-format code)
+     - `ruff check .` (linting)
    - Verify all acceptance criteria from the ticket are met
+   - Ensure no linting errors before proceeding
 
 10. **Commit changes:**
    - Stage relevant files: `git add <files>`
@@ -98,14 +102,26 @@ Plan and implement a Linear ticket following the Template Sense project workflow
      ```
    - Capture the PR URL from the output
 
-12. **Update Linear ticket to Done:**
+12. **Monitor CI checks:**
+   - Wait for CI to complete: `gh pr view <pr-number> --json statusCheckRollup`
+   - Check for failures: `gh run view <run-id> --log-failed` (if CI fails)
+   - **If CI fails:**
+     - Fix the issues locally
+     - Re-run validation (tests, black, ruff)
+     - Commit and push the fixes
+     - Wait for CI to pass
+   - **DO NOT proceed** until all CI checks pass
+   - Verify the PR shows all green checkmarks
+
+13. **Update Linear ticket to Done:**
     - Use `mcp__linear-server__update_issue(id="<ticket-id>", state="Done")`
 
-13. **Add completion comment:**
+14. **Add completion comment:**
     - Use `mcp__linear-server__create_comment()` with:
       - Summary of what was completed
-      - Link to the PR
+      - Link to the PR (with all CI checks passing ✅)
       - Any validation results (e.g., test output, import verification)
+      - Confirmation that all CI checks passed
 
 ## Guidelines
 
@@ -113,8 +129,14 @@ Plan and implement a Linear ticket following the Template Sense project workflow
 - **NEVER** start implementation without explicit user approval of the plan
 - **BE PREPARED** to iterate on the plan based on user feedback
 - **ALWAYS** use the exact `gitBranchName` from Linear - never create your own branch names
-- **ALWAYS** update the Linear ticket status at each stage (In Progress, Done)
+- **ALWAYS** run ALL tests before committing: `pytest tests/ -v`
+- **ALWAYS** run code quality tools before committing: `black .` and `ruff check .`
+- **ALWAYS** verify no linting errors before creating PR
 - **ALWAYS** create a pull request after committing - never skip this step
+- **ALWAYS** monitor CI checks and wait for them to pass before marking ticket as Done
+- **NEVER** mark a ticket as Done if CI checks are failing
+- **ALWAYS** fix any CI failures immediately and wait for green checkmarks
+- **ALWAYS** update the Linear ticket status at each stage (In Progress, Done)
 - **ALWAYS** include the PR URL in the Linear completion comment
 - **ALWAYS** use the TodoWrite tool to track progress for non-trivial tasks
 
@@ -185,13 +207,19 @@ Plan and implement a Linear ticket following the Template Sense project workflow
 - ✅ Created todo list with X tasks
 - 🔄 Implementing feature...
 - ✅ Implementation complete
-- ✅ Validation complete
+- ✅ Validation complete (all tests pass, no linting errors)
 - ✅ Changes committed
 - ✅ Pull request created: <PR URL>
+- ✅ CI checks passed (all green ✅)
 - ✅ Ticket updated to Done
 
 ### Summary:
 <Brief summary of what was accomplished>
+
+### Validation Results:
+- Tests: X/X passed
+- Code quality: All checks passed (Black, Ruff)
+- CI Status: All checks passed ✅
 
 **All acceptance criteria met!**
 ```
