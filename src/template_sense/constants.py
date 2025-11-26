@@ -28,6 +28,7 @@ DEFAULT_AUTO_MAPPING_THRESHOLD = 80.0  # Fuzzy match score for auto-mapping (0.0
 
 # Table detection thresholds
 DEFAULT_TABLE_MIN_SCORE = 0.5  # Minimum score for table candidate rows (0.0-1.0)
+DEFAULT_TABLE_HEADER_MIN_SCORE = 0.6  # Minimum score for table header row detection (0.0-1.0)
 
 # AI timeouts
 DEFAULT_AI_TIMEOUT_SECONDS = 30  # Timeout per AI request
@@ -64,6 +65,7 @@ __all__ = [
     "DEFAULT_CONFIDENCE_THRESHOLD",
     "DEFAULT_AUTO_MAPPING_THRESHOLD",
     "DEFAULT_TABLE_MIN_SCORE",
+    "DEFAULT_TABLE_HEADER_MIN_SCORE",
     "DEFAULT_AI_TIMEOUT_SECONDS",
     "MIN_GRID_ROWS",
     "MIN_GRID_COLUMNS",
