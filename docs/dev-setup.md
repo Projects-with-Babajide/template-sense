@@ -246,6 +246,56 @@ pip install -e .[dev]  # Reinstall
 
 ---
 
+## Using Core Modules
+
+### File Validation Module
+
+The `file_validation` module provides early validation of file inputs before they enter the extraction pipeline.
+
+**Supported file types:** `.xlsx`, `.xls` (Excel formats only)
+
+**Basic usage:**
+
+```python
+from pathlib import Path
+from template_sense.file_validation import (
+    validate_supported_file,
+    is_excel_file,
+    detect_file_type
+)
+
+# Quick check if a file is Excel
+file_path = Path("template.xlsx")
+if is_excel_file(file_path):
+    print("This is an Excel file")
+
+# Detect file type
+extension = detect_file_type(file_path)  # Returns ".xlsx"
+
+# Full validation (checks existence, type, and readability)
+try:
+    validate_supported_file(file_path)
+    print("File is valid and ready for processing")
+except FileValidationError as e:
+    print(f"Validation failed: {e}")
+except UnsupportedFileTypeError as e:
+    print(f"Unsupported file type: {e}")
+```
+
+**What it validates:**
+1. File exists and is accessible
+2. Path points to a file (not a directory)
+3. File extension is supported (`.xlsx` or `.xls`)
+4. File is readable by openpyxl (not corrupted)
+
+**Error handling:**
+- `FileValidationError` - Raised for missing files, unreadable files, or corrupted files
+- `UnsupportedFileTypeError` - Raised for unsupported file formats (PDF, CSV, etc.)
+
+**Security note:** Error messages only expose filenames, never full paths.
+
+---
+
 ## Additional Resources
 
 - **Project Documentation:** See [CLAUDE.md](../CLAUDE.md) for architecture details
