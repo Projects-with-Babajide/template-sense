@@ -445,7 +445,7 @@ def test_real_invoice_templates_discovery():
             workbook = ExcelWorkbook(raw_workbook)
 
             # Get first sheet
-            sheet_names = workbook.sheet_names
+            sheet_names = workbook.get_sheet_names()
             if not sheet_names:
                 print("  ⚠️  No sheets found")
                 raw_workbook.close()
