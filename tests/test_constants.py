@@ -102,8 +102,13 @@ class TestAIProviderConstants:
         assert LOG_LEVEL_ENV_VAR == "TEMPLATE_SENSE_LOG_LEVEL"
 
         # All should be strings
-        for env_var in [AI_PROVIDER_ENV_VAR, AI_MODEL_ENV_VAR, OPENAI_API_KEY_ENV_VAR,
-                       ANTHROPIC_API_KEY_ENV_VAR, LOG_LEVEL_ENV_VAR]:
+        for env_var in [
+            AI_PROVIDER_ENV_VAR,
+            AI_MODEL_ENV_VAR,
+            OPENAI_API_KEY_ENV_VAR,
+            ANTHROPIC_API_KEY_ENV_VAR,
+            LOG_LEVEL_ENV_VAR,
+        ]:
             assert isinstance(env_var, str)
 
     def test_supported_ai_providers(self):
@@ -123,11 +128,11 @@ class TestConstantNamingConventions:
     def test_default_prefix_for_configurable_values(self):
         """Test that configurable values use DEFAULT_ prefix."""
         configurable_constants = [
-            'DEFAULT_MAX_HEADER_ROWS',
-            'DEFAULT_MIN_TABLE_ROWS',
-            'DEFAULT_CONFIDENCE_THRESHOLD',
-            'DEFAULT_AUTO_MAPPING_THRESHOLD',
-            'DEFAULT_AI_TIMEOUT_SECONDS'
+            "DEFAULT_MAX_HEADER_ROWS",
+            "DEFAULT_MIN_TABLE_ROWS",
+            "DEFAULT_CONFIDENCE_THRESHOLD",
+            "DEFAULT_AUTO_MAPPING_THRESHOLD",
+            "DEFAULT_AI_TIMEOUT_SECONDS",
         ]
 
         # Import constants module to check all names
@@ -139,14 +144,16 @@ class TestConstantNamingConventions:
     def test_no_default_prefix_for_fixed_constraints(self):
         """Test that fixed constraints don't use DEFAULT_ prefix."""
         fixed_constants = [
-            'SUPPORTED_FILE_EXTENSIONS',
-            'SUPPORTED_AI_PROVIDERS',
-            'MIN_GRID_ROWS',
-            'MIN_GRID_COLUMNS'
+            "SUPPORTED_FILE_EXTENSIONS",
+            "SUPPORTED_AI_PROVIDERS",
+            "MIN_GRID_ROWS",
+            "MIN_GRID_COLUMNS",
         ]
 
         from template_sense import constants
 
         for const_name in fixed_constants:
             assert hasattr(constants, const_name), f"Missing constant: {const_name}"
-            assert not const_name.startswith('DEFAULT_'), f"Fixed constant should not have DEFAULT_ prefix: {const_name}"
+            assert not const_name.startswith(
+                "DEFAULT_"
+            ), f"Fixed constant should not have DEFAULT_ prefix: {const_name}"
