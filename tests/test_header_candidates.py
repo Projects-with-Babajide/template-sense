@@ -472,18 +472,22 @@ def test_real_invoice_templates_discovery():
                 print(f"    Pattern: {block.detected_pattern}")
                 print(f"    Cells: {len(block.content)} non-empty cells")
 
-                # Show first few cells as sample
-                sample_cells = block.content[:5]
-                print("    Sample content:")
-                for row, col, value in sample_cells:
+                # Show label/value pairs
+                print("    Label/Value pairs:")
+                sample_pairs = block.label_value_pairs[:10]
+                for label, value, row, col in sample_pairs:
                     # Truncate long values
-                    value_str = str(value)
+                    value_str = str(value) if value is not None else ""
                     if len(value_str) > 50:
                         value_str = value_str[:47] + "..."
-                    print(f"      R{row}C{col}: {value_str}")
 
-                if len(block.content) > 5:
-                    print(f"      ... and {len(block.content) - 5} more cells")
+                    if label:
+                        print(f"      R{row}C{col}: [{label}] = {value_str}")
+                    else:
+                        print(f"      R{row}C{col}: {value_str} (no label)")
+
+                if len(block.label_value_pairs) > 10:
+                    print(f"      ... and {len(block.label_value_pairs) - 10} more pairs")
 
             raw_workbook.close()
 
@@ -508,6 +512,7 @@ def test_header_candidate_block_dataclass():
         col_start=1,
         col_end=4,
         content=[(1, 1, "Invoice"), (1, 2, "12345")],
+        label_value_pairs=[(None, "Invoice", 1, 1), (None, "12345", 1, 2)],
         score=0.75,
         detected_pattern="key_value_patterns",
     )
@@ -517,6 +522,7 @@ def test_header_candidate_block_dataclass():
     assert block.col_start == 1
     assert block.col_end == 4
     assert len(block.content) == 2
+    assert len(block.label_value_pairs) == 2
     assert block.score == 0.75
     assert block.detected_pattern == "key_value_patterns"
 

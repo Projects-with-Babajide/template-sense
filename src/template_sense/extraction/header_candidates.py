@@ -113,6 +113,8 @@ class HeaderCandidateBlock:
         col_start: First column of block (1-based, Excel convention)
         col_end: Last column of block (1-based, inclusive)
         content: List of (row, col, value) tuples for all non-empty cells in block
+        label_value_pairs: List of detected (label, value, row, col) tuples.
+                          For cells without clear labels, label will be None.
         score: Confidence score (0.0-1.0) indicating likelihood this is a header block
         detected_pattern: Description of detection pattern (e.g., "key_value_pairs",
                           "metadata_keywords")
@@ -123,6 +125,7 @@ class HeaderCandidateBlock:
     col_start: int
     col_end: int
     content: list[tuple[int, int, Any]]
+    label_value_pairs: list[tuple[str | None, Any, int, int]]
     score: float
     detected_pattern: str
 
@@ -185,6 +188,72 @@ def _contains_metadata_keyword(text: str) -> bool:
     return False
 
 
+def _is_substantial_text(text: str) -> bool:
+    """
+    Check if text is substantial (not just a number or very short).
+
+    This helps identify text-heavy cells that are likely metadata values
+    or labels, as opposed to table cell values.
+
+    Args:
+        text: Text to check
+
+    Returns:
+        True if text is substantial, False otherwise
+    """
+    if not isinstance(text, str):
+        return False
+
+    text_stripped = text.strip()
+
+    # Must have some length
+    if len(text_stripped) < 2:
+        return False
+
+    # Must contain at least one letter (not pure numbers/symbols)
+    if not re.search(r"[a-zA-Z\u3000-\u9fff]", text_stripped):
+        return False
+
+    return True
+
+
+def _extract_label_value_from_cell(cell_value: Any) -> tuple[str | None, Any]:
+    """
+    Try to extract label and value from a single cell.
+
+    Handles patterns like:
+    - "Invoice Number: 12345" -> ("Invoice Number", "12345")
+    - "Date : 2024-01-01" -> ("Date", "2024-01-01")
+    - "FROM : NARITA" -> ("FROM", "NARITA")
+    - "Company Name" -> (None, "Company Name") - value only, no label
+
+    Args:
+        cell_value: Cell value to parse
+
+    Returns:
+        Tuple of (label, value). Label is None if no clear label detected.
+    """
+    if not isinstance(cell_value, str):
+        return (None, cell_value)
+
+    text_stripped = cell_value.strip()
+
+    # Try colon pattern (most common label:value separator)
+    if ":" in text_stripped:
+        parts = text_stripped.split(":", 1)
+        if len(parts) == 2:
+            label = parts[0].strip()
+            value = parts[1].strip()
+            # If value is empty, treat as label only
+            if value:
+                return (label, value)
+            # Colon but no value after it, label only
+            return (label, None)
+
+    # No clear label pattern detected, return as value only
+    return (None, text_stripped)
+
+
 def _calculate_cell_density(row: list[Any]) -> float:
     """
     Calculate the ratio of non-empty cells to total cells in a row.
@@ -207,14 +276,16 @@ def score_row_as_header_candidate(row: list[Any], row_index: int) -> float:
     Score a single row's likelihood of containing invoice metadata.
 
     This function uses multiple heuristics to determine if a row contains
-    header/metadata information rather than table data:
+    header/metadata information rather than table data. It's designed to be
+    permissive and catch various metadata patterns.
 
     Scoring criteria:
-    - Key-value patterns (e.g., "Invoice Number: 12345") → +0.3 to +0.5
-    - Metadata keywords (invoice, date, shipper, etc.) → +0.2 to +0.4
-    - Sparse cell density (30-70% filled) → +0.1
-    - Very dense rows (>80% filled) → -0.2 (likely table data)
-    - Mixed data types (text + numbers) → +0.1
+    - Key-value patterns (e.g., "Invoice Number: 12345") → +0.4 to +0.6
+    - Metadata keywords (invoice, date, shipper, etc.) → +0.3 to +0.5
+    - Substantial text content (not just numbers) → +0.2
+    - Sparse cell density (10-70% filled) → +0.2 (metadata tends to be sparse)
+    - Very dense rows (>85% filled) → -0.3 (likely table data)
+    - Very low density (<10%) → +0.1 (single cell metadata)
 
     Args:
         row: List of cell values (Any type: str, int, float, datetime, None, etc.)
@@ -238,43 +309,45 @@ def score_row_as_header_candidate(row: list[Any], row_index: int) -> float:
     # Heuristic 1: Key-value patterns (highest weight)
     key_value_count = sum(1 for cell in non_empty_cells if _contains_key_value_pattern(str(cell)))
     if key_value_count > 0:
-        score += 0.5 if key_value_count >= 2 else 0.3
+        score += 0.6 if key_value_count >= 2 else 0.4
         pattern_details.append("key_value_patterns")
 
     # Heuristic 2: Metadata keywords (high weight)
     keyword_count = sum(1 for cell in non_empty_cells if _contains_metadata_keyword(str(cell)))
     if keyword_count > 0:
-        score += 0.4 if keyword_count >= 2 else 0.2
+        score += 0.5 if keyword_count >= 2 else 0.3
         pattern_details.append("metadata_keywords")
 
-    # Heuristic 3: Cell density analysis
-    if 0.3 <= density <= 0.7:
-        # Moderate density suggests metadata (not sparse, not full table row)
-        score += 0.1
-        pattern_details.append("moderate_density")
-    elif density > 0.8:
-        # Very dense rows are likely table data
-        score -= 0.2
-        pattern_details.append("dense_row")
+    # Heuristic 3: Substantial text content (new - catches company names, addresses)
+    substantial_text_count = sum(1 for cell in non_empty_cells if _is_substantial_text(str(cell)))
+    if substantial_text_count > 0:
+        score += 0.2
+        pattern_details.append("substantial_text")
 
-    # Heuristic 4: Mixed data types (metadata often has labels + values)
-    has_text = any(isinstance(cell, str) for cell in non_empty_cells)
-    has_numbers = any(
-        isinstance(cell, int | float) and not isinstance(cell, bool) for cell in non_empty_cells
-    )
-    if has_text and has_numbers:
+    # Heuristic 4: Cell density analysis (adjusted to be more permissive)
+    if 0.1 <= density <= 0.7:
+        # Sparse to moderate density suggests metadata
+        score += 0.2
+        pattern_details.append("sparse_density")
+    elif density < 0.1:
+        # Very sparse (1-2 cells) - could be single metadata value
         score += 0.1
-        pattern_details.append("mixed_types")
+        pattern_details.append("very_sparse")
+    elif density > 0.85:
+        # Very dense rows are likely table data (increased penalty)
+        score -= 0.3
+        pattern_details.append("dense_row")
 
     # Clamp score to 0.0-1.0 range
     score = max(0.0, min(1.0, score))
 
     logger.debug(
-        "Row %d scored %.2f (patterns: %s, density: %.2f)",
+        "Row %d scored %.2f (patterns: %s, density: %.2f, cells: %d)",
         row_index,
         score,
         ", ".join(pattern_details) if pattern_details else "none",
         density,
+        len(non_empty_cells),
     )
 
     return score
@@ -435,10 +508,17 @@ def _create_block_from_cluster(
         col_start = 1
         col_end = 1
 
+    # Extract label/value pairs from content
+    label_value_pairs = []
+    for row_idx, col_idx, cell in content:
+        label, value = _extract_label_value_from_cell(cell)
+        label_value_pairs.append((label, value, row_idx, col_idx))
+
     # Determine primary detection pattern
     # Check if any row had key-value patterns
     has_key_value = any(_contains_key_value_pattern(str(cell)) for _, _, cell in content)
     has_keywords = any(_contains_metadata_keyword(str(cell)) for _, _, cell in content)
+    has_substantial_text = any(_is_substantial_text(str(cell)) for _, _, cell in content)
 
     if has_key_value and has_keywords:
         pattern = "key_value_and_keywords"
@@ -446,6 +526,8 @@ def _create_block_from_cluster(
         pattern = "key_value_patterns"
     elif has_keywords:
         pattern = "metadata_keywords"
+    elif has_substantial_text:
+        pattern = "substantial_text"
     else:
         pattern = "structural_heuristics"
 
@@ -455,13 +537,14 @@ def _create_block_from_cluster(
         col_start=col_start,
         col_end=col_end,
         content=content,
+        label_value_pairs=label_value_pairs,
         score=avg_score,
         detected_pattern=pattern,
     )
 
 
 def detect_header_candidate_blocks(
-    grid: list[list[Any]], min_score: float = 0.5, max_gap: int = 2
+    grid: list[list[Any]], min_score: float = 0.3, max_gap: int = 2
 ) -> list[HeaderCandidateBlock]:
     """
     Main entry point for detecting invoice metadata blocks in a grid.
