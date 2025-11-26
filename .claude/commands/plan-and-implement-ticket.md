@@ -42,6 +42,7 @@ Plan and implement a Linear ticket following the Template Sense project workflow
 
 5. **Set up branch:**
    - Switch to main branch first: `git checkout main`
+   - Pull latest changes: `git pull origin main`
    - Create and checkout the branch using the exact `gitBranchName` from Linear
    - Example: `git checkout -b jideokus/bat-12-task-9-create-project-folder-structure`
 

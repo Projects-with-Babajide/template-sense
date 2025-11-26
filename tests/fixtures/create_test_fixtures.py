@@ -16,14 +16,57 @@ def create_test_fixtures():
     """Create test fixture files."""
     fixtures_dir = Path(__file__).parent
 
-    # Create a valid .xlsx file
+    # Create a valid .xlsx file with header and table data
     wb = Workbook()
     ws = wb.active
     ws.title = "Test Sheet"
+
+    # Header section (rows 1-2)
     ws["A1"] = "Invoice Number"
     ws["B1"] = "Date"
     ws["A2"] = "INV-001"
     ws["B2"] = "2025-01-15"
+
+    # Empty row separator (row 3)
+
+    # Table section (rows 4-10)
+    # Table header
+    ws["A4"] = "Item"
+    ws["B4"] = "Quantity"
+    ws["C4"] = "Price"
+    ws["D4"] = "Amount"
+
+    # Table data rows (dense, numeric, consistent columns)
+    ws["A5"] = "Widget A"
+    ws["B5"] = 10
+    ws["C5"] = 25.50
+    ws["D5"] = 255.00
+
+    ws["A6"] = "Widget B"
+    ws["B6"] = 5
+    ws["C6"] = 40.00
+    ws["D6"] = 200.00
+
+    ws["A7"] = "Widget C"
+    ws["B7"] = 15
+    ws["C7"] = 30.00
+    ws["D7"] = 450.00
+
+    ws["A8"] = "Widget D"
+    ws["B8"] = 8
+    ws["C8"] = 50.00
+    ws["D8"] = 400.00
+
+    ws["A9"] = "Widget E"
+    ws["B9"] = 12
+    ws["C9"] = 35.00
+    ws["D9"] = 420.00
+
+    ws["A10"] = "Widget F"
+    ws["B10"] = 20
+    ws["C10"] = 28.00
+    ws["D10"] = 560.00
+
     wb.save(fixtures_dir / "valid_template.xlsx")
     print(f"Created: {fixtures_dir / 'valid_template.xlsx'}")
 
