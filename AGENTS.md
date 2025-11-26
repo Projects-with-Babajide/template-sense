@@ -229,51 +229,6 @@ pytest
 
 ## 9. How Claude Should Use This Document
 
-### Working with Linear Tickets
-
-**CRITICAL WORKFLOW — ALWAYS FOLLOW:**
-
-1. **Fetch ticket details:**
-   ```python
-   issue = mcp__linear-server__get_issue("BAT-12")
-   ```
-
-2. **Extract `gitBranchName` field:**
-   ```python
-   branch_name = issue['gitBranchName']
-   # e.g., "jideokus/bat-12-task-9-create-project-folder-structure"
-   ```
-
-3. **Create/checkout that exact branch:**
-   ```bash
-   git checkout -b jideokus/bat-12-task-9-create-project-folder-structure
-   ```
-
-4. **Update ticket status to "In Progress":**
-   ```python
-   mcp__linear-server__update_issue(id="BAT-12", state="In Progress")
-   ```
-
-5. **Implement the feature** following this document's guidelines
-
-6. **Update ticket status to "Done":**
-   ```python
-   mcp__linear-server__update_issue(id="BAT-12", state="Done")
-   ```
-
-7. **Add completion comment:**
-   ```python
-   mcp__linear-server__create_comment(
-       issueId="BAT-12",
-       body="Completed: [summary of changes]"
-   )
-   ```
-
-**NEVER:**
-- Create your own branch names when working on Linear tickets
-- Skip updating the Linear ticket status
-- Forget to add a completion comment
-
 ### When Implementing a New Feature
 1. Review **Architecture & Patterns**
 2. Check **Data Models** for required types
