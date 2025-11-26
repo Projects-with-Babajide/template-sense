@@ -152,10 +152,7 @@ def _contains_key_value_pattern(text: str) -> bool:
         return True
 
     # Multiple spaces pattern: word, 2+ spaces, word
-    if re.search(r"\S+\s{2,}\S", text):
-        return True
-
-    return False
+    return bool(re.search(r"\S+\s{2,}\S", text))
 
 
 def _contains_metadata_keyword(text: str) -> bool:
@@ -211,10 +208,7 @@ def _is_substantial_text(text: str) -> bool:
         return False
 
     # Must contain at least one letter (not pure numbers/symbols)
-    if not re.search(r"[a-zA-Z\u3000-\u9fff]", text_stripped):
-        return False
-
-    return True
+    return bool(re.search(r"[a-zA-Z\u3000-\u9fff]", text_stripped))
 
 
 def _extract_label_value_from_cell(cell_value: Any) -> tuple[str | None, Any]:
