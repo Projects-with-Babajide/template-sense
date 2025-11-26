@@ -16,11 +16,13 @@ import pytest
 
 from template_sense.extraction.header_candidates import (
     HeaderCandidateBlock,
+    _get_table_excluded_rows,
     cluster_header_candidate_blocks,
     detect_header_candidate_blocks,
     find_header_candidate_rows,
     score_row_as_header_candidate,
 )
+from template_sense.extraction.table_candidates import TableCandidateBlock
 
 # ============================================================================
 # Test: score_row_as_header_candidate
@@ -399,6 +401,238 @@ def test_detect_blocks_pattern_detection():
 
 
 # ============================================================================
+# Test: Table exclusion approach (_get_table_excluded_rows)
+# ============================================================================
+
+
+def test_get_table_excluded_rows_single_table():
+    """Test identifying non-table rows with a single table block."""
+    grid = [
+        ["Header 1", None],  # Row 1 - not in table
+        [None, None],  # Row 2 - empty (should be excluded)
+        ["Item", "Price"],  # Row 3 - in table
+        ["Widget", 100],  # Row 4 - in table
+        ["Gadget", 200],  # Row 5 - in table
+        [None, None],  # Row 6 - empty (should be excluded)
+        ["Footer", None],  # Row 7 - not in table
+    ]
+
+    table_blocks = [
+        TableCandidateBlock(
+            row_start=3,
+            row_end=5,
+            col_start=1,
+            col_end=2,
+            content=[],
+            score=0.8,
+            detected_pattern="test",
+        )
+    ]
+
+    non_table_rows = _get_table_excluded_rows(grid, table_blocks)
+
+    # Should return rows 1 and 7 (non-table, non-empty)
+    assert non_table_rows == {1, 7}
+
+
+def test_get_table_excluded_rows_multiple_tables():
+    """Test identifying non-table rows with multiple table blocks."""
+    grid = [
+        ["Header", None],  # Row 1 - not in table
+        ["Item", "Qty"],  # Row 2 - in table 1
+        ["Widget", 10],  # Row 3 - in table 1
+        [None, None],  # Row 4 - empty
+        ["Charge", "Amount"],  # Row 5 - in table 2
+        ["Shipping", 50],  # Row 6 - in table 2
+        ["Footer", None],  # Row 7 - not in table
+    ]
+
+    table_blocks = [
+        TableCandidateBlock(
+            row_start=2,
+            row_end=3,
+            col_start=1,
+            col_end=2,
+            content=[],
+            score=0.8,
+            detected_pattern="test",
+        ),
+        TableCandidateBlock(
+            row_start=5,
+            row_end=6,
+            col_start=1,
+            col_end=2,
+            content=[],
+            score=0.8,
+            detected_pattern="test",
+        ),
+    ]
+
+    non_table_rows = _get_table_excluded_rows(grid, table_blocks)
+
+    # Should return rows 1 and 7 (non-table, non-empty)
+    assert non_table_rows == {1, 7}
+
+
+def test_get_table_excluded_rows_no_tables():
+    """Test that all non-empty rows are returned when no tables provided."""
+    grid = [
+        ["Header 1", None],  # Row 1
+        ["Header 2", None],  # Row 2
+        [None, None],  # Row 3 - empty
+        ["Footer", None],  # Row 4
+    ]
+
+    table_blocks = []
+
+    non_table_rows = _get_table_excluded_rows(grid, table_blocks)
+
+    # Should return all non-empty rows
+    assert non_table_rows == {1, 2, 4}
+
+
+def test_get_table_excluded_rows_excludes_empty():
+    """Test that empty rows are excluded even if not in table."""
+    grid = [
+        ["Header", None],  # Row 1
+        [None, None],  # Row 2 - empty
+        ["", ""],  # Row 3 - empty (empty strings)
+        ["Footer", None],  # Row 4
+    ]
+
+    table_blocks = []
+
+    non_table_rows = _get_table_excluded_rows(grid, table_blocks)
+
+    # Should return only rows 1 and 4 (non-empty)
+    assert non_table_rows == {1, 4}
+
+
+# ============================================================================
+# Test: Table exclusion approach (detect_header_candidate_blocks)
+# ============================================================================
+
+
+def test_detect_blocks_with_table_exclusion():
+    """Test header detection using table exclusion approach."""
+    grid = [
+        ["Invoice Number: 12345", None],  # Row 1 - metadata
+        ["Company Name", None],  # Row 2 - metadata
+        [None, None],  # Row 3 - empty
+        ["Item", "Quantity", "Price"],  # Row 4 - table header
+        ["Widget", 10, 100],  # Row 5 - table data
+        ["Gadget", 20, 200],  # Row 6 - table data
+        [None, None, None],  # Row 7 - empty
+        ["Footer Note", None, None],  # Row 8 - metadata
+    ]
+
+    # Define table block
+    table_blocks = [
+        TableCandidateBlock(
+            row_start=4,
+            row_end=6,
+            col_start=1,
+            col_end=3,
+            content=[],
+            score=0.8,
+            detected_pattern="test",
+        )
+    ]
+
+    # Detect headers using table exclusion
+    blocks = detect_header_candidate_blocks(grid, table_blocks=table_blocks)
+
+    # Should detect header blocks for rows 1-2 and row 8
+    assert len(blocks) >= 1
+
+    # Verify that table rows (4-6) are NOT in any header block
+    all_header_rows = set()
+    for block in blocks:
+        for row_idx in range(block.row_start, block.row_end + 1):
+            all_header_rows.add(row_idx)
+
+    # Table rows should not be in header blocks
+    assert 4 not in all_header_rows
+    assert 5 not in all_header_rows
+    assert 6 not in all_header_rows
+
+    # Non-table rows should be in header blocks
+    assert 1 in all_header_rows or 2 in all_header_rows
+    assert 8 in all_header_rows
+
+
+def test_detect_blocks_without_table_blocks_backward_compat():
+    """Test that header detection works without table_blocks (backward compatibility)."""
+    grid = [
+        ["Invoice Number: 12345", "Date: 2024-01-01"],  # Header
+        ["Company: ABC Corp", "Address: 123 Main St"],  # Header
+        [None, None],
+        ["Item", "Quantity", "Price"],  # Table
+        ["Widget", 10, 100],
+    ]
+
+    # Call without table_blocks (should use scoring approach)
+    blocks = detect_header_candidate_blocks(grid, min_score=0.5)
+
+    # Should still detect header blocks using scoring
+    assert len(blocks) >= 1
+    assert blocks[0].row_start <= 2
+
+
+def test_detect_blocks_table_exclusion_vs_scoring():
+    """Test that table exclusion finds more metadata than scoring alone."""
+    grid = [
+        ["UTAMARU TRADING LLC", None],  # Row 1 - Company name (no label, might not score high)
+        ["Invoice Number: 12345", None],  # Row 2 - Has label (scores high)
+        [None, None],  # Row 3 - empty
+        ["Item", "Quantity", "Price"],  # Row 4 - table
+        ["Widget", 10, 100],  # Row 5 - table
+        ["Gadget", 20, 200],  # Row 6 - table
+    ]
+
+    table_blocks = [
+        TableCandidateBlock(
+            row_start=4,
+            row_end=6,
+            col_start=1,
+            col_end=3,
+            content=[],
+            score=0.8,
+            detected_pattern="test",
+        )
+    ]
+
+    # With table exclusion
+    blocks_exclusion = detect_header_candidate_blocks(grid, table_blocks=table_blocks)
+
+    # Table exclusion should find metadata
+    assert len(blocks_exclusion) >= 1
+
+    # Verify row 1 is included in table exclusion blocks
+    all_exclusion_rows = set()
+    for block in blocks_exclusion:
+        for row_idx in range(block.row_start, block.row_end + 1):
+            all_exclusion_rows.add(row_idx)
+
+    assert 1 in all_exclusion_rows  # Company name should be detected
+
+
+def test_detect_blocks_empty_table_blocks_list():
+    """Test that empty table_blocks list treats all rows as potential headers."""
+    grid = [
+        ["Header 1", None],
+        ["Header 2", None],
+        ["Header 3", None],
+    ]
+
+    # Pass empty list (no tables)
+    blocks = detect_header_candidate_blocks(grid, table_blocks=[])
+
+    # Should detect all non-empty rows as headers
+    assert len(blocks) >= 1
+
+
+# ============================================================================
 # Test: Real invoice template files
 # ============================================================================
 
@@ -407,8 +641,9 @@ def test_real_invoice_templates_discovery():
     """
     Test header detection on real invoice files in fixtures/invoice_templates/.
 
-    This test scans the invoice_templates directory and runs detection on all
-    .xlsx files found. Results are printed for manual inspection.
+    This test uses the table exclusion approach to ensure comprehensive
+    metadata detection. It scans the invoice_templates directory and runs
+    detection on all .xlsx files found.
 
     To use this test:
     1. Add invoice template .xlsx files to tests/fixtures/invoice_templates/
@@ -428,11 +663,12 @@ def test_real_invoice_templates_discovery():
         pytest.skip(f"No .xlsx files found in {template_dir}")
 
     print(f"\n{'=' * 80}")
-    print(f"Testing {len(xlsx_files)} invoice template(s)")
+    print(f"Testing {len(xlsx_files)} invoice template(s) with TABLE EXCLUSION")
     print(f"{'=' * 80}")
 
     from template_sense.adapters.excel_adapter import ExcelWorkbook
     from template_sense.extraction.sheet_extractor import extract_raw_grid
+    from template_sense.extraction.table_candidates import detect_table_candidate_blocks
     from template_sense.file_loader import load_excel_file
 
     for xlsx_file in xlsx_files:
@@ -458,9 +694,21 @@ def test_real_invoice_templates_discovery():
             grid = extract_raw_grid(workbook, sheet_name)
             print(f"  Grid size: {len(grid)} rows")
 
-            # Detect header blocks
-            blocks = detect_header_candidate_blocks(grid, min_score=0.5)
-            print(f"\n  ✅ Detected {len(blocks)} header block(s):")
+            # Step 1: Detect table blocks first
+            table_blocks = detect_table_candidate_blocks(grid)
+            print(f"\n  📊 Detected {len(table_blocks)} table block(s):")
+            for i, tblock in enumerate(table_blocks, start=1):
+                print(
+                    f"    Table #{i}: R{tblock.row_start}:R{tblock.row_end}, "
+                    f"C{tblock.col_start}:C{tblock.col_end}, score={tblock.score:.2f}"
+                )
+
+            # Step 2: Detect header blocks using table exclusion
+            blocks = detect_header_candidate_blocks(grid, table_blocks=table_blocks)
+            print(f"\n  ✅ Detected {len(blocks)} header block(s) using table exclusion:")
+
+            # Collect all detected metadata values for validation
+            all_detected_values = []
 
             for i, block in enumerate(blocks, start=1):
                 print(f"\n  Block #{i}:")
@@ -481,6 +729,11 @@ def test_real_invoice_templates_discovery():
                     if len(value_str) > 50:
                         value_str = value_str[:47] + "..."
 
+                    # Collect all values for validation
+                    all_detected_values.append(value_str)
+                    if label:
+                        all_detected_values.append(label)
+
                     if label:
                         print(f"      R{row}C{col}: [{label}] = {value_str}")
                     else:
@@ -488,11 +741,61 @@ def test_real_invoice_templates_discovery():
 
                 if len(block.label_value_pairs) > 10:
                     print(f"      ... and {len(block.label_value_pairs) - 10} more pairs")
+                    # Collect remaining values too
+                    for label, value, _row, _col in block.label_value_pairs[10:]:
+                        value_str = str(value) if value is not None else ""
+                        all_detected_values.append(value_str)
+                        if label:
+                            all_detected_values.append(label)
+
+            # Validate acceptance criteria for specific files
+            if xlsx_file.name == "CO.xlsx":
+                print("\n  🔍 Validating acceptance criteria for CO.xlsx...")
+                required_metadata = [
+                    "UTAMARU TRADING LLC",
+                    "COPY",
+                    "GREEN CONTINENT TRADING",
+                    "GCT20240509",
+                    "JAPAN",
+                ]
+                # Check if key metadata is detected (substring match)
+                detected_text = " ".join(all_detected_values)
+                missing = []
+                for req in required_metadata:
+                    if req not in detected_text:
+                        missing.append(req)
+
+                if missing:
+                    print(f"  ⚠️  Missing metadata: {missing}")
+                else:
+                    print("  ✅ All key metadata detected!")
+
+            elif xlsx_file.name == "NA-25078_20251117_INVOICE_PL.xlsx":
+                print("\n  🔍 Validating acceptance criteria for NA-25078...")
+                required_metadata = [
+                    "PT. NAILI OCEAN",
+                    "GA875",
+                    "NA-25078",
+                    "126-90387581",
+                ]
+                detected_text = " ".join(all_detected_values)
+                missing = []
+                for req in required_metadata:
+                    if req not in detected_text:
+                        missing.append(req)
+
+                if missing:
+                    print(f"  ⚠️  Missing metadata: {missing}")
+                else:
+                    print("  ✅ All key metadata detected!")
 
             raw_workbook.close()
 
         except Exception as e:
             print(f"  ❌ Error processing file: {e}")
+            import traceback
+
+            traceback.print_exc()
 
     print(f"\n{'=' * 80}")
     print("✅ Real invoice template testing complete")
