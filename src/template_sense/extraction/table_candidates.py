@@ -48,6 +48,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from template_sense.constants import DEFAULT_MIN_TABLE_ROWS, DEFAULT_TABLE_MIN_SCORE
+
 # Set up module logger
 logger = logging.getLogger(__name__)
 
@@ -277,7 +279,7 @@ def score_row_as_table_candidate(row: list[Any], row_index: int) -> float:
 
 
 def find_table_candidate_rows(
-    grid: list[list[Any]], min_score: float = 0.5
+    grid: list[list[Any]], min_score: float = DEFAULT_TABLE_MIN_SCORE
 ) -> list[tuple[int, float]]:
     """
     Scan entire grid and identify rows with high table scores.
@@ -323,7 +325,9 @@ def find_table_candidate_rows(
 
 
 def cluster_table_blocks(
-    grid: list[list[Any]], scored_rows: list[tuple[int, float]], min_consecutive: int = 3
+    grid: list[list[Any]],
+    scored_rows: list[tuple[int, float]],
+    min_consecutive: int = DEFAULT_MIN_TABLE_ROWS,
 ) -> list[TableCandidateBlock]:
     """
     Group consecutive high-scoring rows into distinct table blocks.
@@ -502,7 +506,9 @@ def _create_table_block_from_cluster(
 
 
 def detect_table_candidate_blocks(
-    grid: list[list[Any]], min_score: float = 0.5, min_consecutive: int = 3
+    grid: list[list[Any]],
+    min_score: float = DEFAULT_TABLE_MIN_SCORE,
+    min_consecutive: int = DEFAULT_MIN_TABLE_ROWS,
 ) -> list[TableCandidateBlock]:
     """
     Main entry point for detecting table/line-item data blocks in a grid.

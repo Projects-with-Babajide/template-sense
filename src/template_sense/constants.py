@@ -20,7 +20,7 @@ SUPPORTED_FILE_EXTENSIONS = (".xlsx", ".xls")  # Canonical source - tuple for im
 
 # Extraction limits
 DEFAULT_MAX_HEADER_ROWS = 50  # Maximum rows to scan for headers
-DEFAULT_MIN_TABLE_ROWS = 3  # Minimum rows to qualify as a table
+DEFAULT_MIN_TABLE_ROWS = 3  # Minimum consecutive rows to qualify as a table
 
 # Confidence thresholds
 DEFAULT_CONFIDENCE_THRESHOLD = 0.7  # Heuristic/AI confidence (0.0-1.0)
