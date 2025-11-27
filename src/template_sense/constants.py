@@ -33,6 +33,9 @@ DEFAULT_TABLE_HEADER_MIN_SCORE = 0.6  # Minimum score for table header row detec
 # AI timeouts
 DEFAULT_AI_TIMEOUT_SECONDS = 30  # Timeout per AI request
 
+# AI payload configuration
+DEFAULT_AI_SAMPLE_ROWS = 5  # Number of sample data rows to include in AI payload
+
 # Grid validation
 MIN_GRID_ROWS = 1
 MIN_GRID_COLUMNS = 1
@@ -67,6 +70,7 @@ __all__ = [
     "DEFAULT_TABLE_MIN_SCORE",
     "DEFAULT_TABLE_HEADER_MIN_SCORE",
     "DEFAULT_AI_TIMEOUT_SECONDS",
+    "DEFAULT_AI_SAMPLE_ROWS",
     "MIN_GRID_ROWS",
     "MIN_GRID_COLUMNS",
     "AI_PROVIDER_ENV_VAR",
