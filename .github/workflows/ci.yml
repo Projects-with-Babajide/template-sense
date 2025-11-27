@@ -45,8 +45,10 @@ jobs:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || 'sk-ant-test-mock-key-for-ci' }}
         TEMPLATE_SENSE_AI_PROVIDER: openai
 
-    - name: Run integration tests (if API keys available)
-      if: ${{ secrets.OPENAI_API_KEY != '' || secrets.ANTHROPIC_API_KEY != '' }}
+    - name: Run integration tests (only on main branch with API keys)
+      # Only run integration tests on main branch (not on PRs from forks)
+      # This prevents exposing secrets to untrusted code
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: |
         pytest tests/integration -v -m integration
       env:
