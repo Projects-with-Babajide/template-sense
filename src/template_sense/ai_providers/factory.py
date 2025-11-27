@@ -33,25 +33,22 @@ def get_ai_provider(config: AIConfig | None = None) -> AIProvider:
     configuration. If no config is provided, it loads configuration from
     environment variables.
 
-    NOTE: In this task (Task 27), no concrete provider implementations exist yet.
-    This factory will raise an error indicating the implementation is not found.
-    Task 28 will add concrete implementations (OpenAIProvider, AnthropicProvider).
+    Supports OpenAI (GPT models) and Anthropic (Claude models).
 
     Args:
         config: Optional AI provider configuration. If None, loads from environment.
 
     Returns:
-        AIProvider: Instance of the appropriate provider implementation
+        AIProvider: Instance of OpenAIProvider or AnthropicProvider
 
     Raises:
         AIProviderError: If config loading fails, provider is unsupported, or
-                        implementation is not found
+                        initialization fails
 
     Example:
         >>> from template_sense.ai_providers.factory import get_ai_provider
-        >>> # After Task 28 implements OpenAIProvider:
-        >>> # provider = get_ai_provider()  # Loads from env vars
-        >>> # result = provider.classify_fields(payload)
+        >>> provider = get_ai_provider()  # Loads from env vars
+        >>> result = provider.classify_fields(payload)
     """
     # Load config from environment if not provided
     if config is None:
@@ -60,22 +57,20 @@ def get_ai_provider(config: AIConfig | None = None) -> AIProvider:
     # Validate provider is supported (already validated in AIConfig.__post_init__)
     provider_name = config.provider
 
-    # In Task 27, no concrete implementations exist yet
-    # Task 28 will add OpenAIProvider and AnthropicProvider classes
-    # At that point, this factory will import and instantiate them:
-    #
-    # if provider_name == "openai":
-    #     from template_sense.ai_providers.openai_provider import OpenAIProvider
-    #     return OpenAIProvider(config)
-    # elif provider_name == "anthropic":
-    #     from template_sense.ai_providers.anthropic_provider import AnthropicProvider
-    #     return AnthropicProvider(config)
+    # Lazy import providers to avoid circular dependencies
+    if provider_name == "openai":
+        from template_sense.ai_providers.openai_provider import OpenAIProvider
 
-    # For now, raise an error indicating implementation not found
+        return OpenAIProvider(config)
+    if provider_name == "anthropic":
+        from template_sense.ai_providers.anthropic_provider import AnthropicProvider
+
+        return AnthropicProvider(config)
+
+    # Should never reach here due to validation in AIConfig.__post_init__
     raise AIProviderError(
         provider_name=provider_name,
-        error_details=f"Provider implementation not found for '{provider_name}'. "
-        f"Concrete provider implementations will be added in Task 28.",
+        error_details=f"Provider implementation not found for '{provider_name}'.",
     )
 
 

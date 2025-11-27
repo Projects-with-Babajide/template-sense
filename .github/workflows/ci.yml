@@ -36,11 +36,22 @@ jobs:
       run: |
         ruff check .
 
-    - name: Run tests with pytest
+    - name: Run unit tests with pytest
       run: |
-        pytest -v --cov=src/template_sense --cov-report=term-missing
+        pytest -v --cov=src/template_sense --cov-report=term-missing -m "not integration"
       env:
-        # Mock API keys for testing (tests should mock actual API calls)
+        # Mock API keys for unit tests (tests should mock actual API calls)
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-test-mock-key-for-ci' }}
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || 'sk-ant-test-mock-key-for-ci' }}
         TEMPLATE_SENSE_AI_PROVIDER: openai
+
+    - name: Run integration tests (only on main branch with API keys)
+      # Only run integration tests on main branch (not on PRs from forks)
+      # This prevents exposing secrets to untrusted code
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        pytest tests/integration -v -m integration
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      continue-on-error: true  # Don't fail CI if integration tests fail
