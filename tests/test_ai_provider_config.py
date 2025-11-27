@@ -128,7 +128,9 @@ class TestLoadAIConfig:
 
     def test_load_config_missing_provider_env_var(self, monkeypatch):
         """Test that missing provider env var raises error."""
-        # Don't set AI_PROVIDER_ENV_VAR
+        # Clear all AI-related env vars to ensure clean test
+        monkeypatch.delenv(AI_PROVIDER_ENV_VAR, raising=False)
+        monkeypatch.delenv(AI_MODEL_ENV_VAR, raising=False)
         monkeypatch.setenv(OPENAI_API_KEY_ENV_VAR, "sk-test-key")
 
         with pytest.raises(AIProviderError) as exc_info:
@@ -156,7 +158,9 @@ class TestLoadAIConfig:
     def test_load_config_missing_openai_api_key(self, monkeypatch):
         """Test that missing OpenAI API key raises error."""
         monkeypatch.setenv(AI_PROVIDER_ENV_VAR, "openai")
-        # Don't set OPENAI_API_KEY_ENV_VAR
+        # Clear API keys to ensure clean test
+        monkeypatch.delenv(OPENAI_API_KEY_ENV_VAR, raising=False)
+        monkeypatch.delenv(ANTHROPIC_API_KEY_ENV_VAR, raising=False)
 
         with pytest.raises(AIProviderError) as exc_info:
             load_ai_config()
@@ -169,7 +173,9 @@ class TestLoadAIConfig:
     def test_load_config_missing_anthropic_api_key(self, monkeypatch):
         """Test that missing Anthropic API key raises error."""
         monkeypatch.setenv(AI_PROVIDER_ENV_VAR, "anthropic")
-        # Don't set ANTHROPIC_API_KEY_ENV_VAR
+        # Clear API keys to ensure clean test
+        monkeypatch.delenv(OPENAI_API_KEY_ENV_VAR, raising=False)
+        monkeypatch.delenv(ANTHROPIC_API_KEY_ENV_VAR, raising=False)
 
         with pytest.raises(AIProviderError) as exc_info:
             load_ai_config()
@@ -182,7 +188,8 @@ class TestLoadAIConfig:
     def test_load_config_wrong_api_key_for_provider(self, monkeypatch):
         """Test that setting wrong API key env var for provider raises error."""
         monkeypatch.setenv(AI_PROVIDER_ENV_VAR, "openai")
-        # Set Anthropic key instead of OpenAI key
+        # Clear OpenAI key and set only Anthropic key
+        monkeypatch.delenv(OPENAI_API_KEY_ENV_VAR, raising=False)
         monkeypatch.setenv(ANTHROPIC_API_KEY_ENV_VAR, "sk-ant-test")
 
         with pytest.raises(AIProviderError) as exc_info:
