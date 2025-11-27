@@ -10,6 +10,8 @@ Public API:
     AIConfig: Configuration dataclass for provider settings
     load_ai_config: Load configuration from environment variables
     get_ai_provider: Factory function to get provider instance
+    OpenAIProvider: OpenAI (GPT) provider implementation
+    AnthropicProvider: Anthropic (Claude) provider implementation
 
 Usage Example:
     from template_sense.ai_providers import get_ai_provider
@@ -27,13 +29,17 @@ Usage Example:
     result = provider.classify_fields(payload)
 """
 
+from template_sense.ai_providers.anthropic_provider import AnthropicProvider
 from template_sense.ai_providers.config import AIConfig, load_ai_config
 from template_sense.ai_providers.factory import get_ai_provider
 from template_sense.ai_providers.interface import AIProvider
+from template_sense.ai_providers.openai_provider import OpenAIProvider
 
 __all__ = [
     "AIProvider",
     "AIConfig",
     "load_ai_config",
     "get_ai_provider",
+    "OpenAIProvider",
+    "AnthropicProvider",
 ]
