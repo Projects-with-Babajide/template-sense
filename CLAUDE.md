@@ -101,6 +101,30 @@ class DocumentAdapter(ABC):
         raise NotImplementedError
 ```
 
+### Constants Management
+
+**Central Constants File:** `src/template_sense/constants.py`
+
+All configuration values must be defined and imported from this module:
+```python
+from template_sense.constants import (
+    DEFAULT_CONFIDENCE_THRESHOLD,
+    DEFAULT_AUTO_MAPPING_THRESHOLD,
+    DEFAULT_MAX_HEADER_ROWS,
+    SUPPORTED_FILE_EXTENSIONS,
+)
+```
+
+**What belongs in constants.py:**
+- File extensions and format specifications
+- Default thresholds (confidence, scoring, fuzzy matching)
+- Extraction limits (max rows, min columns, etc.)
+- Environment variable names
+- Timeouts and performance limits
+- Provider names and configurations
+
+**Never hard-code these values** in other modules. Always import from `constants.py`.
+
 ### Framework-Specific Patterns
 
 **Pytest:** `tests/test_<module_name>.py`, mock external dependencies
@@ -118,12 +142,14 @@ class DocumentAdapter(ABC):
 4. **Import AI providers directly** — Use `AIProvider` interface
 5. **Return internal dataclasses from public API** — Convert to JSON dicts
 6. **Swallow exceptions silently** — Always log with context
+7. **Hard-code configuration values** — Use constants from `src/template_sense/constants.py`
 
 ### ✅ ALWAYS Do This:
 1. **Validate inputs early** at public API boundary
 2. **Use dependency injection** for providers/adapters
 3. **Log recovery events** for non-fatal issues
 4. **Provider-agnostic design** — No provider checks in core logic
+5. **Import constants from `constants.py`** — All thresholds, limits, file extensions, environment variable names, etc. should be imported from `src/template_sense/constants.py`
 
 ---
 
