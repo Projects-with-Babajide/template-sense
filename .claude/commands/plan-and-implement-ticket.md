@@ -7,6 +7,13 @@ Plan and implement a Linear ticket following the Template Sense project workflow
 
 ## Steps
 
+### Phase 0: Setup (REQUIRED - Do this first)
+
+1. **Sync with main branch:**
+   - Switch to main branch: `git checkout main`
+   - Pull latest changes: `git pull origin main`
+   - This ensures you're working with the latest codebase before planning
+
 ### Phase 1: Planning (REQUIRED - Must wait for user confirmation)
 
 1. **Fetch ticket details:**
@@ -41,10 +48,9 @@ Plan and implement a Linear ticket following the Template Sense project workflow
 ### Phase 2: Implementation (Only after user confirms plan)
 
 5. **Set up branch:**
-   - Switch to main branch first: `git checkout main`
-   - Pull latest changes: `git pull origin main`
    - Create and checkout the branch using the exact `gitBranchName` from Linear
    - Example: `git checkout -b jideokus/bat-12-task-9-create-project-folder-structure`
+   - Note: Main branch was already synced in Phase 0
 
 6. **Update ticket status:**
    - Use `mcp__linear-server__update_issue(id="<ticket-id>", state="In Progress")`
@@ -126,6 +132,7 @@ Plan and implement a Linear ticket following the Template Sense project workflow
 
 ## Guidelines
 
+- **ALWAYS** start with Phase 0 (Setup) to sync with main branch before any other work
 - **ALWAYS** complete Phase 1 (Planning) and wait for user confirmation before proceeding to Phase 2 (Implementation)
 - **NEVER** start implementation without explicit user approval of the plan
 - **BE PREPARED** to iterate on the plan based on user feedback
@@ -142,6 +149,16 @@ Plan and implement a Linear ticket following the Template Sense project workflow
 - **ALWAYS** use the TodoWrite tool to track progress for non-trivial tasks
 
 ## Output Format
+
+### Phase 0: Setup Output
+
+```markdown
+## Setup for <TICKET-ID>
+
+- ✅ Switched to main branch
+- ✅ Pulled latest changes from origin/main
+- Ready to proceed with planning
+```
 
 ### Phase 1: Planning Output
 
@@ -202,6 +219,7 @@ Plan and implement a Linear ticket following the Template Sense project workflow
 **Status:** Implementation approved ✅
 
 ### Progress Updates:
+- ✅ Synced with main branch (Phase 0)
 - ✅ Fetched ticket details and created plan
 - ✅ Plan approved by user
 - ✅ Created branch and updated status to In Progress
