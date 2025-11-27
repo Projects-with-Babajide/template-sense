@@ -77,13 +77,16 @@ Plan and implement a Linear ticket following the Template Sense project workflow
 13. **Commit:**
     ```bash
     git add <files>
-    git commit -m "<type>: <description> (<ticket-id>)
+    git commit -m "$(cat <<'EOF'
+<type>: <description> (<ticket-id>)
 
-    - Bullet points of changes
+- Bullet points of changes
 
-    🤖 Generated with [Claude Code](https://claude.com/claude-code)
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-    Co-Authored-By: Claude <noreply@anthropic.com>"
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
     ```
 
 14. **Create PR:**
