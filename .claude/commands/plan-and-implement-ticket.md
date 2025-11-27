@@ -5,240 +5,144 @@ Plan and implement a Linear ticket following the Template Sense project workflow
 ## Inputs
 - Linear ticket ID (e.g., BAT-17)
 
-## Steps
+## Workflow
 
-### Phase 0: Setup (REQUIRED - Do this first)
+### Phase 0: Setup
 
-1. **Sync with main branch:**
-   - Switch to main branch: `git checkout main`
-   - Pull latest changes: `git pull origin main`
-   - This ensures you're working with the latest codebase before planning
+1. **Sync with main:**
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
 
 ### Phase 1: Planning (REQUIRED - Must wait for user confirmation)
 
-1. **Fetch ticket details:**
-   - Use `mcp__linear-server__get_issue("<ticket-id>")` to get ticket information
-   - Extract the `gitBranchName` field from the ticket response
-   - Review the ticket description, checklist, and acceptance criteria
+1. **Fetch ticket:** `mcp__linear-server__get_issue("<ticket-id>")` - Extract `gitBranchName`, review description and acceptance criteria
 
-2. **Analyze requirements:**
-   - Review CLAUDE.md for relevant architecture patterns
-   - Identify which modules/layers will be affected
-   - Check for dependencies on other tickets or modules
-   - Review anti-patterns to avoid
+2. **Explore codebase:** Use Task tool (Explore agent) to understand affected areas, find similar patterns, identify reusable utilities
 
-3. **Create implementation plan:**
-   - Break down the ticket checklist into concrete implementation steps
-   - Identify files to create/modify
-   - List specific functions/classes to implement
-   - Include testing strategy
-   - Note any potential risks or edge cases
+3. **Assess strategic value:**
+   - Does this align with project goals (CLAUDE.md)?
+   - Is the timing right (dependencies complete)?
+   - Provide honest opinion: ✅ Proceed / ⚠️ Reconsider / 🔄 Defer
+   - **WAIT for user's perspective**
 
-4. **Present plan to user:**
-   - Show the implementation plan in a clear, structured format
-   - Include:
-     - Files to create/modify
-     - Key functions/classes to implement
-     - Testing approach
-     - Estimated steps
-   - **WAIT for user confirmation or feedback**
-   - **DO NOT proceed to Phase 2 without explicit user approval**
-   - Be prepared to iterate on the plan based on user feedback
+4. **Review ticket quality:**
+   - Check architecture alignment (layer dependencies)
+   - Identify missing acceptance criteria
+   - Suggest improvements if needed
+   - **WAIT for user confirmation if changes suggested**
+
+5. **Create implementation plan:**
+   - Files to create/modify
+   - Functions/classes to implement
+   - Constants to use/add (from `constants.py`)
+   - Integration points (following layer rules)
+   - Testing strategy (what to test, what to mock)
+   - Risks and edge cases
+
+6. **Present plan:**
+   - Include: Strategic assessment, codebase context, technical plan
+   - **WAIT for user approval - DO NOT proceed without it**
+
+7. **Document changes (if any):** If improvements were accepted, add Linear comment summarizing agreed changes
 
 ### Phase 2: Implementation (Only after user confirms plan)
 
-5. **Set up branch:**
-   - Create and checkout the branch using the exact `gitBranchName` from Linear
-   - Example: `git checkout -b jideokus/bat-12-task-9-create-project-folder-structure`
-   - Note: Main branch was already synced in Phase 0
+8. **Setup branch:**
+   ```bash
+   git checkout -b <gitBranchName-from-linear>
+   ```
 
-6. **Update ticket status:**
-   - Use `mcp__linear-server__update_issue(id="<ticket-id>", state="In Progress")`
+9. **Update status:** `mcp__linear-server__update_issue(id, state="In Progress")`
 
-7. **Create todo list:**
-   - Use `TodoWrite` tool to create a comprehensive task list including:
-     - Implementation tasks from the approved plan
-     - Testing and validation tasks
-     - Git commit task
-     - Pull request creation task
-     - Linear ticket update tasks (status to Done, add completion comment)
+10. **Create todos:** Use TodoWrite for implementation tasks, testing, commit, PR, ticket updates
 
-8. **Implement the feature:**
-   - Follow guidelines from CLAUDE.md
-   - Follow the approved implementation plan
-   - Update todos as you progress (mark in_progress, then completed)
+11. **Implement:**
+    - Follow CLAUDE.md guidelines
+    - Import constants from `constants.py` (never hard-code)
+    - Follow layer dependency rules (import only from layers below)
+    - Update todos as you progress
 
-9. **Validate implementation:**
-   - Run ALL tests: `pytest tests/ -v`
-   - Verify all tests pass
-   - Run code quality tools:
-     - `black .` (auto-format code)
-     - `ruff check .` (linting)
-   - Verify all acceptance criteria from the ticket are met
-   - Ensure no linting errors before proceeding
+12. **Validate:**
+    ```bash
+    pytest tests/ -v              # All tests must pass
+    black .                       # Auto-format
+    ruff check .                  # No linting errors
+    python -c "import template_sense.<module>"  # Verify imports
+    ```
+    - Check: No circular dependencies, no hard-coded constants
+    - Verify all acceptance criteria met
 
-10. **Commit changes:**
-   - Stage relevant files: `git add <files>`
-   - Use conventional commit format:
-     ```
-     <type>: <description> (<ticket-id>)
+13. **Commit:**
+    ```bash
+    git add <files>
+    git commit -m "$(cat <<'EOF'
+<type>: <description> (<ticket-id>)
 
-     - Bullet point of changes
-     - Another change
+- Bullet points of changes
 
-     🤖 Generated with [Claude Code](https://claude.com/claude-code)
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-     Co-Authored-By: Claude <noreply@anthropic.com>
-     ```
-   - Common types: feat, fix, docs, refactor, test, chore
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+    ```
 
-11. **Create pull request:**
-   - Push branch: `git push -u origin <branch-name>`
-   - Create PR using gh CLI:
-     ```bash
-     gh pr create --title "<type>: <title> (<ticket-id>)" --body "$(cat <<'EOF'
-     ## Summary
-     - Bullet points describing changes
+14. **Create PR:**
+    ```bash
+    git push -u origin <branch-name>
+    gh pr create --title "<type>: <title> (<ticket-id>)" --body "..."
+    ```
 
-     ## Test plan
-     - How to test these changes
+15. **Monitor CI:** Wait for all checks to pass - fix failures immediately, **DO NOT proceed if failing**
 
-     🤖 Generated with [Claude Code](https://claude.com/claude-code)
-     EOF
-     )"
-     ```
-   - Capture the PR URL from the output
+16. **Complete ticket:**
+    - Update status: `mcp__linear-server__update_issue(id, state="Done")`
+    - Add comment: Summary, PR URL (with ✅), validation results, CI status
 
-12. **Monitor CI checks:**
-   - Wait for CI to complete: `gh pr view <pr-number> --json statusCheckRollup`
-   - Check for failures: `gh run view <run-id> --log-failed` (if CI fails)
-   - **If CI fails:**
-     - Fix the issues locally
-     - Re-run validation (tests, black, ruff)
-     - Commit and push the fixes
-     - Wait for CI to pass
-   - **DO NOT proceed** until all CI checks pass
-   - Verify the PR shows all green checkmarks
+## Critical Guidelines
 
-13. **Update Linear ticket to Done:**
-    - Use `mcp__linear-server__update_issue(id="<ticket-id>", state="Done")`
+**Planning:**
+- ✅ ALWAYS use Explore agent to understand codebase
+- ✅ ALWAYS provide honest strategic opinion
+- ✅ ALWAYS wait for user approval before implementing
+- ✅ ALWAYS document accepted changes in Linear
 
-14. **Add completion comment:**
-    - Use `mcp__linear-server__create_comment()` with:
-      - Summary of what was completed
-      - Link to the PR (with all CI checks passing ✅)
-      - Any validation results (e.g., test output, import verification)
-      - Confirmation that all CI checks passed
+**Implementation:**
+- ✅ ALWAYS use exact `gitBranchName` from Linear
+- ✅ ALWAYS import from `constants.py` (never hard-code)
+- ✅ ALWAYS follow layer dependencies (bottom-up only)
+- ✅ ALWAYS run all tests + black + ruff before committing
+- ✅ ALWAYS validate imports and check for circular deps
+- ✅ ALWAYS create PR and wait for CI to pass
 
-## Guidelines
+**Completion:**
+- ❌ NEVER mark Done if CI is failing
+- ✅ ALWAYS include PR URL in completion comment
+- ✅ ALWAYS use TodoWrite for non-trivial tasks
 
-- **ALWAYS** start with Phase 0 (Setup) to sync with main branch before any other work
-- **ALWAYS** complete Phase 1 (Planning) and wait for user confirmation before proceeding to Phase 2 (Implementation)
-- **NEVER** start implementation without explicit user approval of the plan
-- **BE PREPARED** to iterate on the plan based on user feedback
-- **ALWAYS** use the exact `gitBranchName` from Linear - never create your own branch names
-- **ALWAYS** run ALL tests before committing: `pytest tests/ -v`
-- **ALWAYS** run code quality tools before committing: `black .` and `ruff check .`
-- **ALWAYS** verify no linting errors before creating PR
-- **ALWAYS** create a pull request after committing - never skip this step
-- **ALWAYS** monitor CI checks and wait for them to pass before marking ticket as Done
-- **NEVER** mark a ticket as Done if CI checks are failing
-- **ALWAYS** fix any CI failures immediately and wait for green checkmarks
-- **ALWAYS** update the Linear ticket status at each stage (In Progress, Done)
-- **ALWAYS** include the PR URL in the Linear completion comment
-- **ALWAYS** use the TodoWrite tool to track progress for non-trivial tasks
+## Common Commit Types
+- `feat` - New feature
+- `fix` - Bug fix
+- `refactor` - Code restructure
+- `test` - Add/update tests
+- `docs` - Documentation
+- `chore` - Maintenance
 
-## Output Format
+## Quick Reference
 
-### Phase 0: Setup Output
+**Key Architecture Principles (from CLAUDE.md):**
+- Layer flow: Adapters → Extraction → AI Providers → AI → Translation → Mapping → Output → API
+- Each layer imports only from layers below (no circular deps)
+- All config values in `constants.py`
+- Provider-agnostic design throughout
+- Mock external dependencies in tests (AI, file I/O)
 
-```markdown
-## Setup for <TICKET-ID>
-
-- ✅ Switched to main branch
-- ✅ Pulled latest changes from origin/main
-- Ready to proceed with planning
-```
-
-### Phase 1: Planning Output
-
-```markdown
-## Planning for <TICKET-ID>: <Title>
-
-**Branch:** <branch-name>
-**Dependencies:** <list any dependent tasks>
-
-### Requirements Analysis:
-- <Key requirement 1>
-- <Key requirement 2>
-
-### Implementation Plan:
-
-#### Files to Create:
-- `path/to/file1.py` — <Purpose>
-- `path/to/file2.py` — <Purpose>
-
-#### Files to Modify:
-- `path/to/existing.py` — <What changes>
-
-#### Key Functions/Classes:
-1. `function_name(params) -> return_type`
-   - Purpose: <description>
-   - Implementation approach: <brief explanation>
-
-2. `ClassName`
-   - Purpose: <description>
-   - Key methods: <list>
-
-#### Testing Strategy:
-- Unit tests in `tests/test_<module>.py`
-- Test cases:
-  - <Test case 1>
-  - <Test case 2>
-- Mock dependencies: <list>
-
-#### Potential Risks/Edge Cases:
-- <Risk 1 and mitigation>
-- <Edge case 1 and handling>
-
-#### Estimated Steps:
-- X implementation tasks
-- Y test tasks
-- Z validation tasks
-
----
-
-**Please review this plan and provide feedback or approval to proceed with implementation.**
-```
-
-### Phase 2: Implementation Output
-
-```markdown
-## Implementing <TICKET-ID>
-
-**Status:** Implementation approved ✅
-
-### Progress Updates:
-- ✅ Synced with main branch (Phase 0)
-- ✅ Fetched ticket details and created plan
-- ✅ Plan approved by user
-- ✅ Created branch and updated status to In Progress
-- ✅ Created todo list with X tasks
-- 🔄 Implementing feature...
-- ✅ Implementation complete
-- ✅ Validation complete (all tests pass, no linting errors)
-- ✅ Changes committed
-- ✅ Pull request created: <PR URL>
-- ✅ CI checks passed (all green ✅)
-- ✅ Ticket updated to Done
-
-### Summary:
-<Brief summary of what was accomplished>
-
-### Validation Results:
-- Tests: X/X passed
-- Code quality: All checks passed (Black, Ruff)
-- CI Status: All checks passed ✅
-
-**All acceptance criteria met!**
-```
+**Anti-Patterns to Avoid:**
+- ❌ Logging sensitive data (API keys, invoice values)
+- ❌ Hard-coding secrets or config values
+- ❌ Using `print()` (use logger)
+- ❌ Importing AI providers directly (use interface)
+- ❌ Returning internal dataclasses from public API
+- ❌ Swallowing exceptions silently
