@@ -126,8 +126,22 @@ def load_ai_config() -> AIConfig:
             error_details=f"Unsupported provider '{provider}'. Supported providers: {supported}",
         )
 
-    # Read API key based on provider
-    api_key_env_var = OPENAI_API_KEY_ENV_VAR if provider == "openai" else ANTHROPIC_API_KEY_ENV_VAR
+    # Map provider names to their API key environment variables
+    # This makes it easy to add new providers in the future
+    provider_to_api_key_env = {
+        "openai": OPENAI_API_KEY_ENV_VAR,
+        "anthropic": ANTHROPIC_API_KEY_ENV_VAR,
+    }
+
+    # Get the appropriate API key environment variable for this provider
+    api_key_env_var = provider_to_api_key_env.get(provider)
+    if not api_key_env_var:
+        raise AIProviderError(
+            provider_name=provider,
+            error_details=f"No API key environment variable configured for provider '{provider}'",
+        )
+
+    # Read the API key from environment
     api_key = os.environ.get(api_key_env_var)
     if not api_key:
         raise AIProviderError(
