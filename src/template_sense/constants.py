@@ -68,6 +68,19 @@ TRANSLATION_TIMEOUT_SECONDS = 30  # Timeout for translation requests
 # (Reserved for future constants as other modules are implemented)
 
 # ============================================================
+# Error Recovery Thresholds
+# ============================================================
+
+# AI confidence threshold for warnings (0.0-1.0 scale)
+MIN_AI_CONFIDENCE_WARNING: float = 0.5
+
+# Fuzzy match score threshold for warnings (0.0-100.0 scale)
+MIN_FUZZY_MATCH_WARNING: float = 70.0
+
+# Maximum acceptable field failure rate (0.0-1.0 scale, e.g., 0.3 = 30%)
+MAX_FIELD_FAILURE_RATE: float = 0.3
+
+# ============================================================
 # Output Constants
 # ============================================================
 
@@ -94,5 +107,8 @@ __all__ = [
     "SUPPORTED_AI_PROVIDERS",
     "DEFAULT_TARGET_LANGUAGE",
     "TRANSLATION_TIMEOUT_SECONDS",
+    "MIN_AI_CONFIDENCE_WARNING",
+    "MIN_FUZZY_MATCH_WARNING",
+    "MAX_FIELD_FAILURE_RATE",
     "OUTPUT_SCHEMA_VERSION",
 ]
