@@ -2,12 +2,16 @@
 AI-assisted classification and analysis modules.
 
 This package contains modules for AI-based template analysis, including
-header field classification and table column classification.
+header field classification, table column classification, and line item extraction.
 """
 
 from template_sense.ai.header_classification import (
     ClassifiedHeaderField,
     classify_header_fields,
+)
+from template_sense.ai.line_item_extraction import (
+    ExtractedLineItem,
+    extract_line_items,
 )
 from template_sense.ai.table_column_classification import (
     ClassifiedTableColumn,
@@ -19,4 +23,6 @@ __all__ = [
     "classify_header_fields",
     "ClassifiedTableColumn",
     "classify_table_columns",
+    "ExtractedLineItem",
+    "extract_line_items",
 ]
