@@ -67,6 +67,12 @@ TRANSLATION_TIMEOUT_SECONDS = 30  # Timeout for translation requests
 
 # (Reserved for future constants as other modules are implemented)
 
+# ============================================================
+# Output Constants
+# ============================================================
+
+OUTPUT_SCHEMA_VERSION = "1.0"  # Default version for normalized output schema
+
 
 __all__ = [
     "SUPPORTED_FILE_EXTENSIONS",
@@ -88,4 +94,5 @@ __all__ = [
     "SUPPORTED_AI_PROVIDERS",
     "DEFAULT_TARGET_LANGUAGE",
     "TRANSLATION_TIMEOUT_SECONDS",
+    "OUTPUT_SCHEMA_VERSION",
 ]
