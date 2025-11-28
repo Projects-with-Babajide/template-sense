@@ -1,8 +1,8 @@
 """
 Output layer for Template Sense.
 
-This module provides canonical data structures and aggregation functionality
-for merging all pipeline outputs into a unified template representation.
+This module provides canonical data structures, aggregation functionality,
+and normalized output transformation for the Template Sense pipeline.
 """
 
 from template_sense.output.canonical_aggregator import (
@@ -13,6 +13,7 @@ from template_sense.output.canonical_aggregator import (
     CanonicalTemplate,
     build_canonical_template,
 )
+from template_sense.output.normalized_output_builder import build_normalized_output
 
 __all__ = [
     "CanonicalHeaderField",
@@ -21,4 +22,5 @@ __all__ = [
     "CanonicalTable",
     "CanonicalTemplate",
     "build_canonical_template",
+    "build_normalized_output",
 ]
