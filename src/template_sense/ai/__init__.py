@@ -9,8 +9,14 @@ from template_sense.ai.header_classification import (
     ClassifiedHeaderField,
     classify_header_fields,
 )
+from template_sense.ai.table_column_classification import (
+    ClassifiedTableColumn,
+    classify_table_columns,
+)
 
 __all__ = [
     "ClassifiedHeaderField",
     "classify_header_fields",
+    "ClassifiedTableColumn",
+    "classify_table_columns",
 ]
