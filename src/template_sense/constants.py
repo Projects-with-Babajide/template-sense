@@ -55,6 +55,13 @@ LOG_LEVEL_ENV_VAR = "TEMPLATE_SENSE_LOG_LEVEL"
 SUPPORTED_AI_PROVIDERS = ("openai", "anthropic")
 
 # ============================================================
+# Translation Constants
+# ============================================================
+
+DEFAULT_TARGET_LANGUAGE = "en"  # Default target language for translation
+TRANSLATION_TIMEOUT_SECONDS = 30  # Timeout for translation requests
+
+# ============================================================
 # Mapping/Normalization Constants
 # ============================================================
 
@@ -79,4 +86,6 @@ __all__ = [
     "ANTHROPIC_API_KEY_ENV_VAR",
     "LOG_LEVEL_ENV_VAR",
     "SUPPORTED_AI_PROVIDERS",
+    "DEFAULT_TARGET_LANGUAGE",
+    "TRANSLATION_TIMEOUT_SECONDS",
 ]
