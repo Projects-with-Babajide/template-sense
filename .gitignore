@@ -213,6 +213,9 @@ issues/*
 
 .claude/settings.local.json
 
+# Claude command outputs - workflow state files
+.claude/command-output/*
+
 # Test fixtures - invoice templates
 # Real invoice files should not be committed to avoid exposing sensitive data
 tests/fixtures/invoice_templates/
