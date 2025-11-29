@@ -613,3 +613,239 @@ def test_customizable_min_consecutive():
 
     # More lenient threshold should find more or equal blocks
     assert len(blocks_2) >= len(blocks_4)
+
+
+# ============================================================
+# Tests for Table Header Expansion (BAT-51)
+# ============================================================
+
+
+def test_expand_with_adjacent_text_header():
+    """Test that text-dense row immediately before table is included in block.
+
+    This simulates CO.xlsx row 18: moderately sparse headers (~50-62% filled)
+    that don't score high initially due to lack of consecutive rows,
+    but should be included via look-behind expansion.
+
+    The key requirement: header row MUST be in the table block.
+    """
+    grid = [
+        [None, None, None, None, None, None, None, None],  # Row 1: Empty/spacer
+        [
+            None,
+            "Item/NO",
+            "Description",
+            "Quantity",
+            None,
+            "Price",
+            "Total",
+            None,
+        ],  # Row 2: Header (62% filled, >50% threshold)
+        [
+            "001",
+            "Widget A",
+            "Electronics",
+            10,
+            "pcs",
+            25.50,
+            255.00,
+            "USD",
+        ],  # Row 3: Dense data (100% filled)
+        ["002", "Widget B", "Hardware", 5, "pcs", 30.00, 150.00, "USD"],  # Row 4: Dense data
+        ["003", "Widget C", "Software", 8, "pcs", 20.00, 160.00, "USD"],  # Row 5: Dense data
+    ]
+
+    blocks = detect_table_candidate_blocks(grid, min_score=0.5, min_consecutive=2)
+
+    assert len(blocks) == 1, f"Should find 1 table block, found {len(blocks)}"
+    # KEY REQUIREMENT: Header row 2 must be included in table block
+    assert (
+        blocks[0].row_start == 2
+    ), f"Table should include header row 2, got row_start={blocks[0].row_start}"
+    assert blocks[0].row_end == 5
+    # Verify header content is present
+    header_cells = [cell for cell in blocks[0].content if cell[0] == 2]
+    assert len(header_cells) > 0, "Header row 2 content must be in block"
+    assert any(
+        "Item/NO" in str(cell[2]) for cell in header_cells
+    ), "Header label 'Item/NO' must be present"
+
+
+def test_no_expand_with_no_row_above():
+    """Test that block starting at row 1 cannot expand upward."""
+    grid = [
+        ["Widget A", 10, 25.50, 255.00],  # Row 1: Data (starts at top)
+        ["Widget B", 5, 30.00, 150.00],  # Row 2: Data
+        ["Widget C", 8, 20.00, 160.00],  # Row 3: Data
+    ]
+
+    blocks = detect_table_candidate_blocks(grid, min_score=0.5, min_consecutive=2)
+
+    assert len(blocks) == 1
+    assert blocks[0].row_start == 1, "Block should start at row 1 (cannot expand)"
+    assert blocks[0].row_end == 3
+    assert "_with_header" not in blocks[0].detected_pattern
+
+
+def test_no_expand_with_metadata_above():
+    """Test that metadata row (key:value pattern) is not included as header.
+
+    Metadata rows have low cell density (<50%) which fails the header detection.
+    """
+    grid = [
+        [
+            "Invoice Date:",
+            "2024-01-01",
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ],  # Row 1: Metadata (25% filled)
+        [None, None, None, None, None, None, None, None],  # Row 2: Blank
+        ["001", "Widget A", "Electronics", 10, "pcs", 25.50, 255.00, "USD"],  # Row 3: Dense data
+        ["002", "Widget B", "Hardware", 5, "pcs", 30.00, 150.00, "USD"],  # Row 4: Dense data
+        ["003", "Widget C", "Software", 8, "pcs", 20.00, 160.00, "USD"],  # Row 5: Dense data
+    ]
+
+    blocks = detect_table_candidate_blocks(grid, min_score=0.5, min_consecutive=2)
+
+    assert len(blocks) == 1
+    # Should start at row 3 (not include metadata row 1)
+    assert (
+        blocks[0].row_start == 3
+    ), f"Should NOT include metadata row, got row_start={blocks[0].row_start}"
+    assert blocks[0].row_end == 5
+    assert "_with_header" not in blocks[0].detected_pattern
+
+
+def test_no_expand_with_blank_row_above():
+    """Test that blank row above table is not included as header."""
+    grid = [
+        [None, None, None, None],  # Row 1: Blank
+        ["Widget A", 10, 25.50, 255.00],  # Row 2: Data
+        ["Widget B", 5, 30.00, 150.00],  # Row 3: Data
+        ["Widget C", 8, 20.00, 160.00],  # Row 4: Data
+    ]
+
+    blocks = detect_table_candidate_blocks(grid, min_score=0.5, min_consecutive=2)
+
+    assert len(blocks) == 1
+    assert blocks[0].row_start == 2, "Should NOT include blank row"
+    assert blocks[0].row_end == 4
+    assert "_with_header" not in blocks[0].detected_pattern
+
+
+def test_no_expand_with_numeric_row_above():
+    """Test that numeric row above table is not included as header."""
+    grid = [
+        [100, 200, 300, 400],  # Row 1: Numeric data (not header-like)
+        ["Widget A", 10, 25.50, 255.00],  # Row 2: Data
+        ["Widget B", 5, 30.00, 150.00],  # Row 3: Data
+        ["Widget C", 8, 20.00, 160.00],  # Row 4: Data
+    ]
+
+    blocks = detect_table_candidate_blocks(grid, min_score=0.5, min_consecutive=2)
+
+    assert len(blocks) == 1
+    # Might include row 1 in the block as data, or start at row 2
+    # Either way, row 1 should NOT be identified as a separate header
+    assert "_with_header" not in blocks[0].detected_pattern
+
+
+def test_expand_multiple_blocks_independently():
+    """Test that multiple table blocks are detected with their headers.
+
+    The key requirement: each table block should include its header row
+    (whether via initial detection or expansion).
+    """
+    grid = [
+        [
+            None,
+            "Item",
+            "Category",
+            "Price",
+            "Currency",
+            None,
+            None,
+            None,
+        ],  # Row 1: Header (62% filled, >50% threshold)
+        ["001", "Widget A", "Electronics", 100, "USD", None, None, None],  # Row 2: Dense data
+        ["002", "Widget B", "Hardware", 200, "USD", None, None, None],  # Row 3: Dense data
+        [None, None, None, None, None, None, None, None],  # Row 4: Gap
+        [
+            None,
+            "Product",
+            "Type",
+            "Cost",
+            "Unit",
+            None,
+            None,
+            None,
+        ],  # Row 5: Header (62% filled, >50% threshold)
+        ["X01", "Gadget X", "Software", 50, "USD", None, None, None],  # Row 6: Dense data
+        ["Y01", "Gadget Y", "Services", 75, "USD", None, None, None],  # Row 7: Dense data
+    ]
+
+    blocks = detect_table_candidate_blocks(grid, min_score=0.5, min_consecutive=2)
+
+    assert len(blocks) == 2, f"Should find 2 table blocks, found {len(blocks)}"
+
+    # First block: should include header row 1
+    assert (
+        blocks[0].row_start == 1
+    ), f"First block should include header row 1, got {blocks[0].row_start}"
+    assert blocks[0].row_end == 3
+    # Verify row 1 content is in block
+    row_1_cells = [cell for cell in blocks[0].content if cell[0] == 1]
+    assert len(row_1_cells) > 0, "Header row 1 should be in block content"
+    assert any(
+        "Item" in str(cell[2]) for cell in row_1_cells
+    ), "Header label 'Item' must be present"
+
+    # Second block: should include header row 5
+    assert (
+        blocks[1].row_start == 5
+    ), f"Second block should include header row 5, got {blocks[1].row_start}"
+    assert blocks[1].row_end == 7
+    # Verify row 5 content is in block
+    row_5_cells = [cell for cell in blocks[1].content if cell[0] == 5]
+    assert len(row_5_cells) > 0, "Header row 5 should be in block content"
+    assert any(
+        "Product" in str(cell[2]) for cell in row_5_cells
+    ), "Header label 'Product' must be present"
+
+
+def test_looks_like_table_header_true():
+    """Test _looks_like_table_header returns True for valid headers."""
+    from template_sense.extraction.table_candidates import _looks_like_table_header
+
+    # Typical table headers (all text)
+    assert _looks_like_table_header(["Item", "Quantity", "Price", "Total"]) is True
+
+    # Headers with some empty cells (still >50% filled)
+    assert _looks_like_table_header(["Item", None, "Price", "Total"]) is True
+
+    # Headers with mixed types (dates, strings)
+    assert _looks_like_table_header(["Product", "Date", "Amount", None]) is True
+
+
+def test_looks_like_table_header_false():
+    """Test _looks_like_table_header returns False for non-headers."""
+    from template_sense.extraction.table_candidates import _looks_like_table_header
+
+    # Empty row
+    assert _looks_like_table_header([None, None, None, None]) is False
+
+    # Numeric data row (>30% numeric)
+    assert _looks_like_table_header(["Widget", 10, 25.50, 255.00]) is False
+
+    # Sparse row (<50% filled)
+    assert _looks_like_table_header(["Item", None, None, None, None, None]) is False
+
+    # Mostly numeric (>30% numeric)
+    assert _looks_like_table_header([100, 200, 300, "Total"]) is False
+
+    # Single cell
+    assert _looks_like_table_header(["Item"]) is True  # 100% text, 100% density
