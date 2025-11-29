@@ -126,15 +126,18 @@ def test_happy_path_with_mocked_ai(simple_field_dictionary, tmp_path):
         mock_get_provider.return_value = mock_provider
 
         # Mock all AI classification functions to return empty lists
-        with patch(
-            "template_sense.pipeline.extraction_pipeline.classify_header_fields"
-        ) as mock_classify_headers, patch(
-            "template_sense.pipeline.extraction_pipeline.classify_table_columns"
-        ) as mock_classify_columns, patch(
-            "template_sense.pipeline.extraction_pipeline.extract_line_items"
-        ) as mock_extract_items, patch(
-            "template_sense.pipeline.extraction_pipeline.translate_labels"
-        ) as mock_translate:
+        with (
+            patch(
+                "template_sense.pipeline.extraction_pipeline.classify_header_fields"
+            ) as mock_classify_headers,
+            patch(
+                "template_sense.pipeline.extraction_pipeline.classify_table_columns"
+            ) as mock_classify_columns,
+            patch(
+                "template_sense.pipeline.extraction_pipeline.extract_line_items"
+            ) as mock_extract_items,
+            patch("template_sense.pipeline.extraction_pipeline.translate_labels") as mock_translate,
+        ):
             # Set return values
             mock_classify_headers.return_value = []
             mock_classify_columns.return_value = []
@@ -240,15 +243,18 @@ def test_ai_provider_complete_failure(simple_field_dictionary):
         mock_get_provider.return_value = mock_provider
 
         # Make all AI classification functions raise errors
-        with patch(
-            "template_sense.pipeline.extraction_pipeline.classify_header_fields"
-        ) as mock_classify_headers, patch(
-            "template_sense.pipeline.extraction_pipeline.classify_table_columns"
-        ) as mock_classify_columns, patch(
-            "template_sense.pipeline.extraction_pipeline.extract_line_items"
-        ) as mock_extract_items, patch(
-            "template_sense.pipeline.extraction_pipeline.translate_labels"
-        ) as mock_translate:
+        with (
+            patch(
+                "template_sense.pipeline.extraction_pipeline.classify_header_fields"
+            ) as mock_classify_headers,
+            patch(
+                "template_sense.pipeline.extraction_pipeline.classify_table_columns"
+            ) as mock_classify_columns,
+            patch(
+                "template_sense.pipeline.extraction_pipeline.extract_line_items"
+            ) as mock_extract_items,
+            patch("template_sense.pipeline.extraction_pipeline.translate_labels") as mock_translate,
+        ):
             # Raise AIProviderError for all functions
             mock_classify_headers.side_effect = AIProviderError(
                 provider_name="openai",
@@ -300,15 +306,18 @@ def test_partial_ai_response_low_confidence(simple_field_dictionary):
         mock_provider.config.model = "gpt-4"
         mock_get_provider.return_value = mock_provider
 
-        with patch(
-            "template_sense.pipeline.extraction_pipeline.classify_header_fields"
-        ) as mock_classify_headers, patch(
-            "template_sense.pipeline.extraction_pipeline.classify_table_columns"
-        ) as mock_classify_columns, patch(
-            "template_sense.pipeline.extraction_pipeline.extract_line_items"
-        ) as mock_extract_items, patch(
-            "template_sense.pipeline.extraction_pipeline.translate_labels"
-        ) as mock_translate:
+        with (
+            patch(
+                "template_sense.pipeline.extraction_pipeline.classify_header_fields"
+            ) as mock_classify_headers,
+            patch(
+                "template_sense.pipeline.extraction_pipeline.classify_table_columns"
+            ) as mock_classify_columns,
+            patch(
+                "template_sense.pipeline.extraction_pipeline.extract_line_items"
+            ) as mock_extract_items,
+            patch("template_sense.pipeline.extraction_pipeline.translate_labels") as mock_translate,
+        ):
             # Return low confidence results
             mock_classify_headers.return_value = [
                 ClassifiedHeaderField(
@@ -371,18 +380,23 @@ def test_metadata_validation(simple_field_dictionary):
         mock_provider.config.model = "claude-3-sonnet"
         mock_get_provider.return_value = mock_provider
 
-        with patch(
-            "template_sense.pipeline.extraction_pipeline.classify_header_fields",
-            return_value=[],
-        ), patch(
-            "template_sense.pipeline.extraction_pipeline.classify_table_columns",
-            return_value=[],
-        ), patch(
-            "template_sense.pipeline.extraction_pipeline.extract_line_items",
-            return_value=[],
-        ), patch(
-            "template_sense.pipeline.extraction_pipeline.translate_labels",
-            return_value=[],
+        with (
+            patch(
+                "template_sense.pipeline.extraction_pipeline.classify_header_fields",
+                return_value=[],
+            ),
+            patch(
+                "template_sense.pipeline.extraction_pipeline.classify_table_columns",
+                return_value=[],
+            ),
+            patch(
+                "template_sense.pipeline.extraction_pipeline.extract_line_items",
+                return_value=[],
+            ),
+            patch(
+                "template_sense.pipeline.extraction_pipeline.translate_labels",
+                return_value=[],
+            ),
         ):
             result = run_extraction_pipeline(
                 file_path=fixture_path,
