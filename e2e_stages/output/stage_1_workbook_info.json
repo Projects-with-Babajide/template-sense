@@ -1,0 +1,11 @@
+{
+  "file_path": "tests/fixtures/invoice_templates/CO.xlsx",
+  "file_size_bytes": 437047,
+  "sheet_names": [
+    "CO"
+  ],
+  "selected_sheet": "CO",
+  "max_row": 45,
+  "max_column": 8,
+  "total_sheets": 1
+}

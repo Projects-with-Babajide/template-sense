@@ -1,0 +1,23 @@
+{
+  "due_date": "Due date",
+  "invoice_number": "Invoice number",
+  "invoice_date": "Invoice date",
+  "notes": "Notes",
+  "shipper": "Shipper",
+  "consignee": "Consignee",
+  "shipper_address": "Shipper address",
+  "consignee_address": "Consignee address",
+  "etd": "ETD",
+  "eta": "ETA",
+  "port_of_loading": "Port of loading",
+  "port_of_discharge": "Port of discharge",
+  "flight_number": "Flight number",
+  "awb_number": "AWB number",
+  "total_gross_weight": "Total gross weight",
+  "total_boxes": "Total boxes",
+  "fixed_freight_cost": "Fixed freight cost",
+  "variable_freight_cost": "Variable freight cost",
+  "mark": "Mark",
+  "terms_of_delivery": "Terms of delivery",
+  "terms_of_payment": "Terms of payment"
+}

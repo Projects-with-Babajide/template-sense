@@ -1,0 +1,21 @@
+{
+  "box_name": "Box name",
+  "number_of_boxes": "Number of boxes",
+  "condition": "Condition",
+  "product_name": "Product name",
+  "description": "Description",
+  "origin": "Origin",
+  "quantity": "Quantity",
+  "quantity_unit": "Quantity unit",
+  "net_weight": "Net weight",
+  "gross_weight": "Gross weight",
+  "currency": "Currency",
+  "price": "Price",
+  "price_unit": "Price unit",
+  "cost": "Cost",
+  "cost_unit": "Cost unit",
+  "price_per_kg": "Price/kg",
+  "amount": "Amount",
+  "freight_cost": "Freight cost",
+  "total_amount": "Total amount"
+}
