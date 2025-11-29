@@ -85,6 +85,7 @@ MAX_FIELD_FAILURE_RATE: float = 0.3
 # ============================================================
 
 OUTPUT_SCHEMA_VERSION = "1.0"  # Default version for normalized output schema
+PIPELINE_VERSION = "1.0"  # Pipeline orchestration version
 
 
 __all__ = [
@@ -111,4 +112,5 @@ __all__ = [
     "MIN_FUZZY_MATCH_WARNING",
     "MAX_FIELD_FAILURE_RATE",
     "OUTPUT_SCHEMA_VERSION",
+    "PIPELINE_VERSION",
 ]

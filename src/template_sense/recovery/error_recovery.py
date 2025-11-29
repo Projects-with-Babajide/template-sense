@@ -107,8 +107,10 @@ def filter_by_ai_confidence(
             field_obj, "canonical_key", str(field_obj)
         )
 
-        # Check if confidence score exists
-        ai_confidence = getattr(field_obj, "ai_confidence", None)
+        # Check if confidence score exists (support both ai_confidence and model_confidence)
+        ai_confidence = getattr(field_obj, "model_confidence", None) or getattr(
+            field_obj, "ai_confidence", None
+        )
 
         if ai_confidence is None:
             # Missing confidence score - INFO level

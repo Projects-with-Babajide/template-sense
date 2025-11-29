@@ -202,6 +202,24 @@ class NormalizationError(TemplateSenseError):
         self.field_name = field_name
 
 
+class InvalidFieldDictionaryError(TemplateSenseError):
+    """Raised when field dictionary validation fails."""
+
+    def __init__(self, reason: str, field_dictionary: dict | None = None):
+        """
+        Initialize InvalidFieldDictionaryError.
+
+        Args:
+            reason: Description of why field dictionary is invalid
+            field_dictionary: Optional field dictionary (not logged for security)
+        """
+        message = f"Invalid field dictionary: {reason}"
+
+        super().__init__(message)
+        self.reason = reason
+        # Don't store the actual dictionary for security reasons
+
+
 __all__ = [
     "TemplateSenseError",
     "FileValidationError",
@@ -211,4 +229,5 @@ __all__ = [
     "TranslationError",
     "MappingError",
     "NormalizationError",
+    "InvalidFieldDictionaryError",
 ]
