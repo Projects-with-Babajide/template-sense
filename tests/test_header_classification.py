@@ -107,8 +107,8 @@ class TestClassifyHeaderFieldsSuccess:
         assert result[1].raw_value == "2025-01-15"
         assert result[1].model_confidence == 0.90
 
-        # Verify provider was called with correct payload
-        mock_provider.classify_fields.assert_called_once_with(sample_payload)
+        # Verify provider was called with correct payload and context
+        mock_provider.classify_fields.assert_called_once_with(sample_payload, context="headers")
 
     def test_classify_headers_with_metadata(self, mock_provider, sample_payload):
         """Test classification with optional metadata field."""
