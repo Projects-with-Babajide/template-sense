@@ -10,7 +10,7 @@
 
 ## Stage 5: AI Payload
 - **Sheet name**: `CO`
-- **Header candidates**: 27
+- **Header candidates**: 22
 - **Table candidates**: 1
 - **Field dictionary keys**: 40
 
@@ -29,16 +29,16 @@
 ### Table Candidates
 
 #### Table 1
-- **Location**: Rows 19-23, Cols 2-8
+- **Location**: Rows 18-23, Cols 2-8
 - **Score**: 1.00
-- **Total data rows**: 4
-- **Header row**: 19
+- **Total data rows**: 5
+- **Header row**: 18
 - **Header cells** (7):
-  - Col 2: `G01-05`
-  - Col 3: `5`
-  - Col 4: `Frozen Wild Bluefin Tuna - Otoro`
-  - Col 5: `Maguro`
-  - Col 6: `5`
+  - Col 2: `Item/NO`
+  - Col 3: `No of CTN`
+  - Col 4: `Items`
+  - Col 5: `None`
+  - Col 6: `Quantity`
 
 
 ## Output Files

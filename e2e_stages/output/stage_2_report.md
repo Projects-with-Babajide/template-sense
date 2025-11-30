@@ -12,10 +12,10 @@
 ## Header Blocks
 
 ### Block 1
-- **Location**: Rows 1-18, Cols 2-8
+- **Location**: Rows 1-16, Cols 2-6
 - **Score**: 1.00
 - **Pattern**: key_value_and_keywords
-- **Label-value pairs**: 22
+- **Label-value pairs**: 17
 
 **Sample pairs** (first 5):
 - `label` = `value` (Row row, Col col)
@@ -41,10 +41,10 @@
 ## Table Blocks
 
 ### Block 1
-- **Location**: Rows 19-23, Cols 2-8
+- **Location**: Rows 18-23, Cols 2-8
 - **Score**: 1.00
-- **Pattern**: moderate_numeric_density
-- **Total cells**: 35
+- **Pattern**: moderate_numeric_density_with_header
+- **Total cells**: 40
 
 
 ## Output Files

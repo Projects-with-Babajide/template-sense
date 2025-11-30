@@ -3,9 +3,9 @@
   "header_blocks": [
     {
       "row_start": 1,
-      "row_end": 18,
+      "row_end": 16,
       "col_start": 2,
-      "col_end": 8,
+      "col_end": 6,
       "content": [
         [
           1,
@@ -91,31 +91,6 @@
           16,
           4,
           "BY AIR"
-        ],
-        [
-          18,
-          2,
-          "Item/NO"
-        ],
-        [
-          18,
-          3,
-          "No of CTN"
-        ],
-        [
-          18,
-          4,
-          "Items"
-        ],
-        [
-          18,
-          6,
-          "Quantity"
-        ],
-        [
-          18,
-          8,
-          "Net Weight\n(KGS)"
         ]
       ],
       "label_value_pairs": [
@@ -220,36 +195,6 @@
           "value": "BY AIR",
           "row": 16,
           "col": 4
-        },
-        {
-          "label": null,
-          "value": "Item/NO",
-          "row": 18,
-          "col": 2
-        },
-        {
-          "label": null,
-          "value": "No of CTN",
-          "row": 18,
-          "col": 3
-        },
-        {
-          "label": null,
-          "value": "Items",
-          "row": 18,
-          "col": 4
-        },
-        {
-          "label": null,
-          "value": "Quantity",
-          "row": 18,
-          "col": 6
-        },
-        {
-          "label": null,
-          "value": "Net Weight\n(KGS)",
-          "row": 18,
-          "col": 8
         }
       ],
       "score": 1.0,
@@ -325,27 +270,52 @@
   ],
   "table_blocks": [
     {
-      "row_start": 19,
+      "row_start": 18,
       "row_end": 23,
       "col_start": 2,
       "col_end": 8,
       "header_row": {
-        "row_index": 19,
+        "row_index": 18,
         "col_start": 2,
         "col_end": 8,
         "values": [
-          "G01-05",
-          5,
-          "Frozen Wild Bluefin Tuna - Otoro",
-          "Maguro",
-          5,
-          "cs",
-          100
+          "Item/NO",
+          "No of CTN",
+          "Items",
+          null,
+          "Quantity",
+          null,
+          "Net Weight\n(KGS)"
         ],
-        "score": 0.7,
-        "detected_pattern": "first_row_dense"
+        "score": 1.0,
+        "detected_pattern": "first_row_text_dense"
       },
       "content": [
+        [
+          18,
+          2,
+          "Item/NO"
+        ],
+        [
+          18,
+          3,
+          "No of CTN"
+        ],
+        [
+          18,
+          4,
+          "Items"
+        ],
+        [
+          18,
+          6,
+          "Quantity"
+        ],
+        [
+          18,
+          8,
+          "Net Weight\n(KGS)"
+        ],
         [
           19,
           2,
@@ -523,7 +493,7 @@
         ]
       ],
       "score": 1.0,
-      "detected_pattern": "moderate_numeric_density"
+      "detected_pattern": "moderate_numeric_density_with_header"
     }
   ]
 }

@@ -121,41 +121,6 @@
       "score": 1.0
     },
     {
-      "row": 18,
-      "col": 2,
-      "label": null,
-      "value": "Item/NO",
-      "score": 1.0
-    },
-    {
-      "row": 18,
-      "col": 3,
-      "label": null,
-      "value": "No of CTN",
-      "score": 1.0
-    },
-    {
-      "row": 18,
-      "col": 4,
-      "label": null,
-      "value": "Items",
-      "score": 1.0
-    },
-    {
-      "row": 18,
-      "col": 6,
-      "label": null,
-      "value": "Quantity",
-      "score": 1.0
-    },
-    {
-      "row": 18,
-      "col": 8,
-      "label": null,
-      "value": "Net Weight\n(KGS)",
-      "score": 1.0
-    },
-    {
       "row": 37,
       "col": 2,
       "label": null,
@@ -193,52 +158,61 @@
   ],
   "table_candidates": [
     {
-      "start_row": 19,
+      "start_row": 18,
       "end_row": 23,
       "start_col": 2,
       "end_col": 8,
       "header_row": {
-        "row_index": 19,
+        "row_index": 18,
         "cells": [
           {
             "col": 2,
-            "value": "G01-05",
-            "score": 0.7
+            "value": "Item/NO",
+            "score": 1.0
           },
           {
             "col": 3,
-            "value": 5,
-            "score": 0.7
+            "value": "No of CTN",
+            "score": 1.0
           },
           {
             "col": 4,
-            "value": "Frozen Wild Bluefin Tuna - Otoro",
-            "score": 0.7
+            "value": "Items",
+            "score": 1.0
           },
           {
             "col": 5,
-            "value": "Maguro",
-            "score": 0.7
+            "value": null,
+            "score": 1.0
           },
           {
             "col": 6,
-            "value": 5,
-            "score": 0.7
+            "value": "Quantity",
+            "score": 1.0
           },
           {
             "col": 7,
-            "value": "cs",
-            "score": 0.7
+            "value": null,
+            "score": 1.0
           },
           {
             "col": 8,
-            "value": 100,
-            "score": 0.7
+            "value": "Net Weight\n(KGS)",
+            "score": 1.0
           }
         ],
-        "detected_pattern": "first_row_dense"
+        "detected_pattern": "first_row_text_dense"
       },
       "sample_data_rows": [
+        [
+          "G01-05",
+          5,
+          "Frozen Wild Bluefin Tuna - Otoro",
+          "Maguro",
+          5,
+          "cs",
+          100
+        ],
         [
           "G05-10",
           5,
@@ -276,9 +250,9 @@
           400
         ]
       ],
-      "total_data_rows": 4,
+      "total_data_rows": 5,
       "score": 1.0,
-      "detected_pattern": "moderate_numeric_density"
+      "detected_pattern": "moderate_numeric_density_with_header"
     }
   ],
   "field_dictionary": {
