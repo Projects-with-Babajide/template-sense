@@ -1,0 +1,393 @@
+{
+  "normalized_output": {
+    "headers": {
+      "matched": [],
+      "unmatched": [
+        {
+          "detected_label": null,
+          "cell_value": "UTAMARU TRADING LLC",
+          "location": {
+            "row": 1,
+            "column": 2
+          },
+          "ai_confidence": 1.0,
+          "translated_label": "DE",
+          "best_match_score": 40.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "2-19-11-603, Azabujuban, Minato-ku, Tokyo, 106-0045 Japan",
+          "location": {
+            "row": 2,
+            "column": 2
+          },
+          "ai_confidence": 1.0,
+          "translated_label": "TO",
+          "best_match_score": 40.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "COPY",
+          "location": {
+            "row": 5,
+            "column": 6
+          },
+          "ai_confidence": 1.0,
+          "translated_label": "Shipment Day",
+          "best_match_score": 52.63157894736842
+        },
+        {
+          "detected_label": null,
+          "cell_value": "GREEN CONTINENT TRADING",
+          "location": {
+            "row": 6,
+            "column": 2
+          },
+          "ai_confidence": 1.0,
+          "translated_label": "Transportation",
+          "best_match_score": 48.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "Abu Hail Building 13, plot, 16940,",
+          "location": {
+            "row": 7,
+            "column": 2
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "GCT20240509",
+          "location": {
+            "row": 7,
+            "column": 6
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "G-04 Office, Abu Hail. Dubai, UAE",
+          "location": {
+            "row": 8,
+            "column": 2
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "2024-05-08T00:00:00",
+          "location": {
+            "row": 8,
+            "column": 6
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "JAPAN",
+          "location": {
+            "row": 11,
+            "column": 6
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": "FROM",
+          "cell_value": null,
+          "location": {
+            "row": 13,
+            "column": 2
+          },
+          "ai_confidence": 1.0,
+          "translated_label": "FROM",
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "NARITA JAPAN",
+          "location": {
+            "row": 13,
+            "column": 4
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": "TO",
+          "cell_value": null,
+          "location": {
+            "row": 14,
+            "column": 2
+          },
+          "ai_confidence": 1.0,
+          "translated_label": "TO",
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "DUBAI UEA",
+          "location": {
+            "row": 14,
+            "column": 4
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": "SHIPMENT DAY",
+          "cell_value": null,
+          "location": {
+            "row": 15,
+            "column": 2
+          },
+          "ai_confidence": 1.0,
+          "translated_label": "SHIPMENT DAY",
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "2024-05-09T00:00:00",
+          "location": {
+            "row": 15,
+            "column": 4
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": "TRANSPORTATION",
+          "cell_value": null,
+          "location": {
+            "row": 16,
+            "column": 2
+          },
+          "ai_confidence": 1.0,
+          "translated_label": "TRANSPORTATION",
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "BY AIR",
+          "location": {
+            "row": 16,
+            "column": 4
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "NO MARK",
+          "location": {
+            "row": 37,
+            "column": 2
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "",
+          "location": {
+            "row": 39,
+            "column": 1
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "2024-05-08T00:00:00",
+          "location": {
+            "row": 40,
+            "column": 4
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "UTAMARU TRADING LLC",
+          "location": {
+            "row": 41,
+            "column": 4
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        },
+        {
+          "detected_label": null,
+          "cell_value": "UTAMARU RYUICHI",
+          "location": {
+            "row": 44,
+            "column": 4
+          },
+          "ai_confidence": 1.0,
+          "translated_label": null,
+          "best_match_score": 0.0
+        }
+      ]
+    },
+    "tables": [
+      {
+        "table_index": 0,
+        "location": {
+          "row_index": 18,
+          "col_index": 2
+        },
+        "columns": [
+          {
+            "column_index": 2,
+            "detected_label": "Item/NO",
+            "ai_confidence": 0.95,
+            "translated_label": "Item/Number",
+            "best_match_score": 66.66666666666666
+          },
+          {
+            "column_index": 3,
+            "detected_label": "No of CTN",
+            "ai_confidence": 0.95,
+            "canonical_key": "number_of_boxes",
+            "translated_label": "Number of CTN",
+            "fuzzy_match_score": 81.81818181818181
+          },
+          {
+            "column_index": 4,
+            "detected_label": "Items",
+            "ai_confidence": 0.95,
+            "translated_label": "Items",
+            "best_match_score": 60.0
+          },
+          {
+            "column_index": 5,
+            "detected_label": null,
+            "ai_confidence": 0.95,
+            "canonical_key": "quantity",
+            "translated_label": "Quantity",
+            "fuzzy_match_score": 100.0
+          },
+          {
+            "column_index": 6,
+            "detected_label": "Quantity",
+            "ai_confidence": 0.95,
+            "canonical_key": "net_weight",
+            "translated_label": "Net Weight (KGS)",
+            "fuzzy_match_score": 100.0
+          },
+          {
+            "column_index": 7,
+            "detected_label": null,
+            "ai_confidence": 0.95,
+            "translated_label": null,
+            "best_match_score": 0.0
+          },
+          {
+            "column_index": 8,
+            "detected_label": "Net Weight\n(KGS)",
+            "ai_confidence": 0.95,
+            "translated_label": "Net Weight\n(KGS)",
+            "best_match_score": 0.0
+          }
+        ]
+      }
+    ],
+    "line_items": [
+      {
+        "row_index": 0,
+        "table_index": 0,
+        "columns": {
+          "Item/NO": "G01-05",
+          "No of CTN": 5,
+          "Items": "Frozen Wild Bluefin Tuna - Otoro",
+          "Quantity": 5,
+          "Net Weight\n(KGS)": 100
+        },
+        "model_confidence": null,
+        "metadata": null
+      },
+      {
+        "row_index": 1,
+        "table_index": 0,
+        "columns": {
+          "Item/NO": "G05-10",
+          "No of CTN": 5,
+          "Items": "Frozen Wild Bluefin Tuna - Block",
+          "Quantity": 5,
+          "Net Weight\n(KGS)": 100
+        },
+        "model_confidence": null,
+        "metadata": null
+      },
+      {
+        "row_index": 2,
+        "table_index": 0,
+        "columns": {
+          "Item/NO": "G10-30",
+          "No of CTN": 20,
+          "Items": "Frozen Wild Bluefin Tuna - Akami",
+          "Quantity": 20,
+          "Net Weight\n(KGS)": 300
+        },
+        "model_confidence": null,
+        "metadata": null
+      },
+      {
+        "row_index": 3,
+        "table_index": 0,
+        "columns": {
+          "Item/NO": "G30-40",
+          "No of CTN": 10,
+          "Items": "Frozen Wild Hamachi Fillet",
+          "Quantity": 10,
+          "Net Weight\n(KGS)": 100
+        },
+        "model_confidence": null,
+        "metadata": null
+      },
+      {
+        "row_index": 4,
+        "table_index": 0,
+        "columns": {
+          "Item/NO": "G40-70",
+          "No of CTN": 30,
+          "Items": "Frozen Wild Hamachi Loin",
+          "Quantity": 30,
+          "Net Weight\n(KGS)": 400
+        },
+        "model_confidence": null,
+        "metadata": null
+      }
+    ]
+  },
+  "metadata": {
+    "file_path": "tests/fixtures/invoice_templates/CO.xlsx",
+    "sheet_name": "CO",
+    "ai_provider": "openai",
+    "ai_model": "gpt-4o",
+    "pipeline_stages_completed": 10,
+    "timing": {
+      "ai_classification_seconds": 11.558464790985454,
+      "translation_seconds": 6.4640350000117905,
+      "fuzzy_matching_seconds": 0.0026877920608967543
+    }
+  }
+}

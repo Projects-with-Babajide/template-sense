@@ -23,6 +23,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+# ruff: noqa: E402
 from template_sense.ai.translation import TranslatedLabel
 from template_sense.constants import DEFAULT_AUTO_MAPPING_THRESHOLD, DEFAULT_TARGET_LANGUAGE
 from template_sense.mapping.fuzzy_field_matching import match_fields
@@ -220,7 +221,6 @@ def main():
             "canonical_key": r.canonical_key,
             "match_score": r.match_score,
             "matched_variant": r.matched_variant,
-            "detected_source_language": r.detected_source_language,
         }
         for r in header_match_results
     ]
@@ -232,7 +232,6 @@ def main():
             "canonical_key": r.canonical_key,
             "match_score": r.match_score,
             "matched_variant": r.matched_variant,
-            "detected_source_language": r.detected_source_language,
         }
         for r in column_match_results
     ]

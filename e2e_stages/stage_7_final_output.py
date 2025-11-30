@@ -112,16 +112,16 @@ def main():
         match_result = matched_columns[i] if i < len(matched_columns) else None
 
         # Start new table if needed
-        if column.get("table_index") != current_table_idx:
+        if column.get("table_block_index") != current_table_idx:
             if current_table:
                 tables.append(current_table)
 
-            current_table_idx = column.get("table_index")
+            current_table_idx = column.get("table_block_index")
             current_table = {
                 "table_index": current_table_idx,
                 "location": {
-                    "row_start": column.get("row_start"),
-                    "row_end": column.get("row_end"),
+                    "row_index": column.get("row_index"),
+                    "col_index": column.get("col_index"),
                 },
                 "columns": [],
             }
@@ -246,7 +246,7 @@ def main():
         report += f"""
 #### Table {table['table_index']}
 - **Columns**: {total_cols} ({matched_cols} matched, {total_cols - matched_cols} unmatched)
-- **Location**: Rows {table['location']['row_start']}-{table['location']['row_end']}
+- **Location**: Row {table['location']['row_index']}, Col {table['location']['col_index']}
 - **Matched columns**:
 """
         for col in [c for c in table["columns"] if "canonical_key" in c][:10]:

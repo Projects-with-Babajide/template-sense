@@ -1,0 +1,30 @@
+[
+  {
+    "original_text": "FROM",
+    "translated_text": "DE",
+    "canonical_key": null,
+    "match_score": 40.0,
+    "matched_variant": null
+  },
+  {
+    "original_text": "TO",
+    "translated_text": "TO",
+    "canonical_key": null,
+    "match_score": 40.0,
+    "matched_variant": null
+  },
+  {
+    "original_text": "SHIPMENT DAY",
+    "translated_text": "Shipment Day",
+    "canonical_key": null,
+    "match_score": 52.63157894736842,
+    "matched_variant": null
+  },
+  {
+    "original_text": "TRANSPORTATION",
+    "translated_text": "Transportation",
+    "canonical_key": null,
+    "match_score": 48.0,
+    "matched_variant": null
+  }
+]
