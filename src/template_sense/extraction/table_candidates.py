@@ -48,7 +48,13 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from template_sense.constants import DEFAULT_MIN_TABLE_ROWS, DEFAULT_TABLE_MIN_SCORE
+from template_sense.constants import (
+    DEFAULT_HEADER_CELL_DENSITY_THRESHOLD,
+    DEFAULT_HEADER_NUMERIC_DENSITY_MAX,
+    DEFAULT_HEADER_TEXT_DENSITY_THRESHOLD,
+    DEFAULT_MIN_TABLE_ROWS,
+    DEFAULT_TABLE_MIN_SCORE,
+)
 
 # Set up module logger
 logger = logging.getLogger(__name__)
@@ -177,6 +183,71 @@ def _calculate_average_cell_length(row: list[Any]) -> float:
 
     total_length = sum(len(str(cell)) for cell in non_empty_cells)
     return total_length / len(non_empty_cells)
+
+
+def _looks_like_table_header(row: list[Any]) -> bool:
+    """
+    Check if a row looks like table column headers.
+
+    Table headers typically have:
+    - High text density (>70% text cells)
+    - Moderate to high cell density (>50% non-empty)
+    - Low numeric density (<30% numeric cells)
+
+    This is used for the look-behind header detection to expand table blocks
+    to include adjacent text-dense rows that contain column labels.
+
+    Args:
+        row: List of cell values
+
+    Returns:
+        True if row appears to be table column headers, False otherwise
+
+    Example:
+        >>> row = ["Item", "Quantity", "Price", "Total"]
+        >>> _looks_like_table_header(row)
+        True
+        >>> row = ["Widget A", 10, 25.50, 255.00]
+        >>> _looks_like_table_header(row)
+        False
+    """
+    non_empty_cells = [cell for cell in row if cell not in (None, "")]
+
+    if not non_empty_cells:
+        return False
+
+    # Calculate cell density (non-empty / total)
+    cell_density = len(non_empty_cells) / len(row)
+
+    # Count text vs numeric cells
+    text_count = 0
+    numeric_count = 0
+
+    for cell in non_empty_cells:
+        if isinstance(cell, str):
+            # Try to parse as number
+            try:
+                float(cell.strip())
+                numeric_count += 1
+            except (ValueError, AttributeError):
+                # Not a number, count as text
+                text_count += 1
+        elif isinstance(cell, int | float):
+            numeric_count += 1
+        else:
+            # Other types (datetime, bool, etc.) count as text for header detection
+            text_count += 1
+
+    # Calculate densities
+    text_density = text_count / len(non_empty_cells)
+    numeric_density = numeric_count / len(non_empty_cells)
+
+    # Check if row matches header criteria
+    return (
+        text_density > DEFAULT_HEADER_TEXT_DENSITY_THRESHOLD
+        and cell_density > DEFAULT_HEADER_CELL_DENSITY_THRESHOLD
+        and numeric_density < DEFAULT_HEADER_NUMERIC_DENSITY_MAX
+    )
 
 
 def score_row_as_table_candidate(row: list[Any], row_index: int) -> float:
@@ -505,6 +576,112 @@ def _create_table_block_from_cluster(
     )
 
 
+def expand_table_blocks_with_headers(
+    blocks: list[TableCandidateBlock], grid: list[list[Any]]
+) -> list[TableCandidateBlock]:
+    """
+    Expand table blocks upward to include adjacent header rows.
+
+    After clustering table blocks based on numeric density, this function checks
+    if the row immediately before each block looks like table column headers
+    (high text density, low numeric density). If so, it expands the block to
+    include that header row.
+
+    This solves the "chicken-and-egg" problem where:
+    - Table detection scores text-heavy header rows LOW (not numeric data)
+    - Header detection then picks them up as metadata
+    - But they should actually be part of the table structure
+
+    Args:
+        blocks: List of detected table blocks (already clustered)
+        grid: Raw grid (0-based indexing)
+
+    Returns:
+        List of table blocks with headers included where detected. Original blocks
+        are returned unchanged if no header row is found above them.
+
+    Example:
+        >>> grid = [
+        ...     ["Item", "Qty", "Price"],  # Row 1: Header (not in block)
+        ...     ["Widget", 10, 25.50],     # Row 2: Data (in block)
+        ...     ["Gadget", 5, 30.00],      # Row 3: Data (in block)
+        ... ]
+        >>> blocks = [TableCandidateBlock(row_start=2, row_end=3, ...)]
+        >>> expanded = expand_table_blocks_with_headers(blocks, grid)
+        >>> expanded[0].row_start
+        1  # Now includes header row
+    """
+    expanded_blocks = []
+
+    for block in blocks:
+        # Check row immediately above block start
+        header_row_index = block.row_start - 1  # 1-based
+
+        # Edge case: block starts at row 1, no row above
+        if header_row_index < 1:
+            expanded_blocks.append(block)
+            logger.debug(
+                "Table block at R%d:R%d cannot expand upward (already at top)",
+                block.row_start,
+                block.row_end,
+            )
+            continue
+
+        # Get the row above (convert to 0-based indexing)
+        if header_row_index - 1 >= len(grid):
+            # Row index out of grid bounds
+            expanded_blocks.append(block)
+            logger.debug(
+                "Table block at R%d:R%d cannot expand upward (row %d out of bounds)",
+                block.row_start,
+                block.row_end,
+                header_row_index,
+            )
+            continue
+
+        header_row = grid[header_row_index - 1]  # Convert to 0-based
+
+        # Check if row looks like table headers
+        if _looks_like_table_header(header_row):
+            logger.info(
+                "Expanding table block R%d:R%d to include header row R%d",
+                block.row_start,
+                block.row_end,
+                header_row_index,
+            )
+
+            # Extract content from header row (only cells within table's column range)
+            header_content = []
+            for col_idx in range(block.col_start - 1, min(block.col_end, len(header_row))):
+                cell = header_row[col_idx]
+                if cell not in (None, ""):
+                    # Store as (row_1based, col_1based, value)
+                    header_content.append((header_row_index, col_idx + 1, cell))
+
+            # Create expanded block
+            expanded_block = TableCandidateBlock(
+                row_start=header_row_index,  # Include header row
+                row_end=block.row_end,
+                col_start=block.col_start,
+                col_end=block.col_end,
+                content=header_content + block.content,  # Header first, then data
+                score=block.score,  # Keep original score
+                detected_pattern=f"{block.detected_pattern}_with_header",
+            )
+            expanded_blocks.append(expanded_block)
+        else:
+            # Row above doesn't look like headers, keep original block
+            expanded_blocks.append(block)
+            logger.debug(
+                "Row R%d above table block R%d:R%d does not look like headers (not expanding)",
+                header_row_index,
+                block.row_start,
+                block.row_end,
+            )
+
+    return expanded_blocks
+
+
 def detect_table_candidate_blocks(
     grid: list[list[Any]],
     min_score: float = DEFAULT_TABLE_MIN_SCORE,
@@ -572,6 +749,9 @@ def detect_table_candidate_blocks(
     # Step 2: Cluster into blocks with minimum consecutive requirement
     blocks = cluster_table_blocks(grid, scored_rows, min_consecutive=min_consecutive)
 
+    # Step 3: Expand blocks to include adjacent header rows
+    blocks = expand_table_blocks_with_headers(blocks, grid)
+
     logger.info(
         "Table detection complete: found %d block(s) from %d candidate rows",
         len(blocks),
@@ -586,5 +766,6 @@ __all__ = [
     "score_row_as_table_candidate",
     "find_table_candidate_rows",
     "cluster_table_blocks",
+    "expand_table_blocks_with_headers",
     "detect_table_candidate_blocks",
 ]

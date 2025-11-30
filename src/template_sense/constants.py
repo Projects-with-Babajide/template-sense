@@ -81,6 +81,22 @@ MIN_FUZZY_MATCH_WARNING: float = 70.0
 MAX_FIELD_FAILURE_RATE: float = 0.3
 
 # ============================================================
+# Table Header Detection Thresholds
+# ============================================================
+
+# Text density threshold for table header rows (0.0-1.0 scale)
+# Rows with >70% text cells are likely column labels
+DEFAULT_HEADER_TEXT_DENSITY_THRESHOLD: float = 0.7
+
+# Cell density threshold for table header rows (0.0-1.0 scale)
+# Rows with >50% non-empty cells are likely headers
+DEFAULT_HEADER_CELL_DENSITY_THRESHOLD: float = 0.5
+
+# Maximum numeric density for table header rows (0.0-1.0 scale)
+# Rows with <30% numeric cells are likely text-based headers
+DEFAULT_HEADER_NUMERIC_DENSITY_MAX: float = 0.3
+
+# ============================================================
 # Output Constants
 # ============================================================
 
@@ -111,6 +127,9 @@ __all__ = [
     "MIN_AI_CONFIDENCE_WARNING",
     "MIN_FUZZY_MATCH_WARNING",
     "MAX_FIELD_FAILURE_RATE",
+    "DEFAULT_HEADER_TEXT_DENSITY_THRESHOLD",
+    "DEFAULT_HEADER_CELL_DENSITY_THRESHOLD",
+    "DEFAULT_HEADER_NUMERIC_DENSITY_MAX",
     "OUTPUT_SCHEMA_VERSION",
     "PIPELINE_VERSION",
 ]
