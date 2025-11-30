@@ -108,9 +108,9 @@ def classify_header_fields(
         header_count,
     )
 
-    # Call the AI provider
+    # Call the AI provider with context="headers"
     try:
-        response = ai_provider.classify_fields(payload)
+        response = ai_provider.classify_fields(payload, context="headers")
     except Exception as e:
         # AIProvider implementations should wrap errors in AIProviderError,
         # but catch any unexpected errors here as well

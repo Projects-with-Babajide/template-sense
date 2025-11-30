@@ -103,16 +103,124 @@ class TestOpenAIProviderClassifyFields:
         mock_response = Mock()
         mock_response.choices = [Mock()]
         mock_response.choices[0].message.content = json.dumps(
-            {"classifications": [{"field": "invoice_number", "confidence": 0.95}]}
+            {
+                "headers": [
+                    {
+                        "raw_label": "Invoice",
+                        "raw_value": "12345",
+                        "row_index": 1,
+                        "col_index": 1,
+                        "block_index": 0,
+                    }
+                ]
+            }
         )
 
         provider.client.chat.completions.create = Mock(return_value=mock_response)
 
         result = provider.classify_fields(sample_payload)
 
-        assert "classifications" in result
-        assert result["classifications"][0]["field"] == "invoice_number"
+        assert "headers" in result
+        assert result["headers"][0]["raw_label"] == "Invoice"
         provider.client.chat.completions.create.assert_called_once()
+
+    def test_classify_fields_with_headers_context(self, provider, sample_payload):
+        """Test field classification with explicit headers context."""
+        mock_response = Mock()
+        mock_response.choices = [Mock()]
+        mock_response.choices[0].message.content = json.dumps(
+            {
+                "headers": [
+                    {
+                        "raw_label": "Invoice",
+                        "raw_value": "12345",
+                        "row_index": 1,
+                        "col_index": 1,
+                        "block_index": 0,
+                    }
+                ]
+            }
+        )
+
+        provider.client.chat.completions.create = Mock(return_value=mock_response)
+
+        result = provider.classify_fields(sample_payload, context="headers")
+
+        assert "headers" in result
+        provider.client.chat.completions.create.assert_called_once()
+
+    def test_classify_fields_with_columns_context(self, provider, sample_payload):
+        """Test field classification with columns context."""
+        mock_response = Mock()
+        mock_response.choices = [Mock()]
+        mock_response.choices[0].message.content = json.dumps(
+            {
+                "columns": [
+                    {
+                        "raw_label": "Item",
+                        "raw_position": 0,
+                        "table_block_index": 0,
+                        "row_index": 5,
+                        "col_index": 1,
+                        "sample_values": ["A", "B"],
+                    }
+                ]
+            }
+        )
+
+        provider.client.chat.completions.create = Mock(return_value=mock_response)
+
+        result = provider.classify_fields(sample_payload, context="columns")
+
+        assert "columns" in result
+        assert result["columns"][0]["raw_label"] == "Item"
+        provider.client.chat.completions.create.assert_called_once()
+
+    def test_classify_fields_with_line_items_context(self, provider, sample_payload):
+        """Test field classification with line_items context."""
+        mock_response = Mock()
+        mock_response.choices = [Mock()]
+        mock_response.choices[0].message.content = json.dumps(
+            {
+                "line_items": [
+                    {
+                        "table_index": 0,
+                        "row_index": 6,
+                        "columns": {"item": "Product A"},
+                        "is_subtotal": False,
+                    }
+                ]
+            }
+        )
+
+        provider.client.chat.completions.create = Mock(return_value=mock_response)
+
+        result = provider.classify_fields(sample_payload, context="line_items")
+
+        assert "line_items" in result
+        provider.client.chat.completions.create.assert_called_once()
+
+    def test_classify_fields_invalid_context(self, provider, sample_payload):
+        """Test field classification with invalid context raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            provider.classify_fields(sample_payload, context="invalid_context")
+
+        assert "Invalid context" in str(exc_info.value)
+
+    def test_classify_fields_missing_expected_key(self, provider, sample_payload):
+        """Test classification with response missing expected key for context."""
+        mock_response = Mock()
+        mock_response.choices = [Mock()]
+        # Response has "columns" key but we're using headers context
+        mock_response.choices[0].message.content = json.dumps({"columns": [{"raw_label": "Item"}]})
+
+        provider.client.chat.completions.create = Mock(return_value=mock_response)
+
+        with pytest.raises(AIProviderError) as exc_info:
+            provider.classify_fields(sample_payload, context="headers")
+
+        error = exc_info.value
+        assert "Response missing 'headers' key" in error.error_details
 
     def test_classify_fields_authentication_error(self, provider, sample_payload):
         """Test classification with authentication error."""

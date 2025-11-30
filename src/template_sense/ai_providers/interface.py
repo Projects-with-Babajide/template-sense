@@ -105,7 +105,7 @@ class AIProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def classify_fields(self, payload: dict[str, Any]) -> dict[str, Any]:
+    def classify_fields(self, payload: dict[str, Any], context: str = "headers") -> dict[str, Any]:
         """
         Classify header fields or table columns using AI.
 
@@ -116,12 +116,18 @@ class AIProvider(ABC):
         Args:
             payload: Structured data containing fields/columns to classify
                 Expected structure defined by ai_payload_schema module
+            context: Classification context - "headers", "columns", or "line_items"
+                Determines prompt strategy and expected response format
 
         Returns:
-            dict containing classified fields with confidence scores and labels
+            Dict with classification results:
+            - context="headers" → {"headers": [...]}
+            - context="columns" → {"columns": [...]}
+            - context="line_items" → {"line_items": [...]}
 
         Raises:
             AIProviderError: If the API request fails or returns invalid data
+            ValueError: If context is not a supported value
 
         Example:
             >>> payload = {
@@ -129,9 +135,9 @@ class AIProvider(ABC):
             ...         {"label": "Invoice No", "value": "INV-001", "position": "A1"}
             ...     ]
             ... }
-            >>> result = provider.classify_fields(payload)
-            >>> print(result["classifications"][0]["canonical_key"])
-            'invoice_number'
+            >>> result = provider.classify_fields(payload, context="headers")
+            >>> print(result["headers"][0]["raw_label"])
+            'Invoice No'
         """
         raise NotImplementedError
 

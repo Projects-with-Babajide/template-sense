@@ -111,9 +111,9 @@ def classify_table_columns(
         table_count,
     )
 
-    # Call the AI provider
+    # Call the AI provider with context="columns"
     try:
-        response = ai_provider.classify_fields(payload)
+        response = ai_provider.classify_fields(payload, context="columns")
     except Exception as e:
         # AIProvider implementations should wrap errors in AIProviderError,
         # but catch any unexpected errors here as well
