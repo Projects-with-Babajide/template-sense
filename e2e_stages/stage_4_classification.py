@@ -27,6 +27,7 @@ load_dotenv()
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+# ruff: noqa: E402
 from template_sense.ai.header_classification import classify_header_fields
 from template_sense.ai.line_item_extraction import extract_line_items
 from template_sense.ai.table_column_classification import classify_table_columns
@@ -138,8 +139,8 @@ def main():
         print(f"    {i}. '{column.raw_label}' (Col {column.col_index})")
         if column.model_confidence:
             print(f"       AI Confidence: {column.model_confidence:.1%}")
-        if column.raw_value_examples:
-            print(f"       Sample values: {column.raw_value_examples[:3]}")
+        if column.sample_values:
+            print(f"       Sample values: {column.sample_values[:3]}")
 
     # ========================================================================
     # Stage 6c: Line Item Extraction
@@ -156,8 +157,8 @@ def main():
     print("\n  Sample line items (first 3):")
     for i, item in enumerate(extracted_line_items[:3], 1):
         print(f"    {i}. Row {item.row_index}, Table {item.table_index}")
-        print(f"       Fields: {len(item.field_values)}")
-        print(f"       Sample: {dict(list(item.field_values.items())[:3])}")
+        print(f"       Fields: {len(item.columns)}")
+        print(f"       Sample: {dict(list(item.columns.items())[:3])}")
 
     # ========================================================================
     # Save Output
@@ -183,11 +184,11 @@ def main():
         {
             "canonical_key": c.canonical_key,
             "raw_label": c.raw_label,
-            "raw_value_examples": c.raw_value_examples,
-            "table_index": c.table_index,
+            "raw_position": c.raw_position,
+            "sample_values": c.sample_values,
+            "table_block_index": c.table_block_index,
+            "row_index": c.row_index,
             "col_index": c.col_index,
-            "row_start": c.row_start,
-            "row_end": c.row_end,
             "model_confidence": c.model_confidence,
             "metadata": c.metadata,
         }
@@ -198,7 +199,7 @@ def main():
         {
             "row_index": item.row_index,
             "table_index": item.table_index,
-            "field_values": item.field_values,
+            "columns": item.columns,
             "model_confidence": item.model_confidence,
             "metadata": item.metadata,
         }
@@ -287,7 +288,9 @@ def main():
 """
 
     for i, item in enumerate(extracted_line_items[:5], 1):
-        report += f"{i}. Row {item.row_index}, Table {item.table_index} - {len(item.field_values)} fields\n"
+        report += (
+            f"{i}. Row {item.row_index}, Table {item.table_index} - {len(item.columns)} fields\n"
+        )
 
     report += f"""
 

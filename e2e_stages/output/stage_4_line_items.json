@@ -1,0 +1,67 @@
+[
+  {
+    "row_index": 0,
+    "table_index": 0,
+    "columns": {
+      "Item/NO": "G01-05",
+      "No of CTN": 5,
+      "Items": "Frozen Wild Bluefin Tuna - Otoro",
+      "Quantity": 5,
+      "Net Weight\n(KGS)": 100
+    },
+    "model_confidence": null,
+    "metadata": null
+  },
+  {
+    "row_index": 1,
+    "table_index": 0,
+    "columns": {
+      "Item/NO": "G05-10",
+      "No of CTN": 5,
+      "Items": "Frozen Wild Bluefin Tuna - Block",
+      "Quantity": 5,
+      "Net Weight\n(KGS)": 100
+    },
+    "model_confidence": null,
+    "metadata": null
+  },
+  {
+    "row_index": 2,
+    "table_index": 0,
+    "columns": {
+      "Item/NO": "G10-30",
+      "No of CTN": 20,
+      "Items": "Frozen Wild Bluefin Tuna - Akami",
+      "Quantity": 20,
+      "Net Weight\n(KGS)": 300
+    },
+    "model_confidence": null,
+    "metadata": null
+  },
+  {
+    "row_index": 3,
+    "table_index": 0,
+    "columns": {
+      "Item/NO": "G30-40",
+      "No of CTN": 10,
+      "Items": "Frozen Wild Hamachi Fillet",
+      "Quantity": 10,
+      "Net Weight\n(KGS)": 100
+    },
+    "model_confidence": null,
+    "metadata": null
+  },
+  {
+    "row_index": 4,
+    "table_index": 0,
+    "columns": {
+      "Item/NO": "G40-70",
+      "No of CTN": 30,
+      "Items": "Frozen Wild Hamachi Loin",
+      "Quantity": 30,
+      "Net Weight\n(KGS)": 400
+    },
+    "model_confidence": null,
+    "metadata": null
+  }
+]

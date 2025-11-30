@@ -108,7 +108,7 @@ def extract_line_items(
 
     # Call the AI provider
     try:
-        response = ai_provider.classify_fields(payload)
+        response = ai_provider.classify_fields(payload, context="line_items")
     except Exception as e:
         # AIProvider implementations should wrap errors in AIProviderError,
         # but catch any unexpected errors here as well

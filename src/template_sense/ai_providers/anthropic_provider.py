@@ -201,26 +201,61 @@ class AnthropicProvider(AIProvider):
             return (
                 "You are a field classification assistant for invoice templates. "
                 "Analyze the provided header fields and classify each field "
-                "semantically based on common invoice terminology. Return your "
-                "response as valid JSON only, with no additional text or explanation. "
-                "Use a 'headers' key containing an array of classified fields."
+                "semantically based on common invoice terminology.\n\n"
+                "Return your response as valid JSON matching this exact schema:\n"
+                "{\n"
+                '  "headers": [\n'
+                "    {\n"
+                '      "raw_label": "Invoice Number",  // The label text (or null)\n'
+                '      "raw_value": "INV-12345",       // The value text (or null)\n'
+                '      "block_index": 0,               // Header block index (integer)\n'
+                '      "row_index": 1,                 // Row position (integer)\n'
+                '      "col_index": 1,                 // Column position (integer)\n'
+                '      "model_confidence": 0.95        // Confidence 0.0-1.0 (optional)\n'
+                "    }\n"
+                "  ]\n"
+                "}\n\n"
+                "All fields except model_confidence are required. Return ONLY valid JSON, no other text."
             )
         if context == "columns":
             return (
                 "You are a table column classification assistant for invoice templates. "
                 "Analyze the provided table columns and classify each column "
-                "semantically based on common invoice table structures (e.g., "
-                "item name, quantity, unit price, amount). Return your response "
-                "as valid JSON only, with no additional text or explanation. "
-                "Use a 'columns' key containing an array of classified columns."
+                "semantically based on common invoice table structures.\n\n"
+                "Return your response as valid JSON matching this exact schema:\n"
+                "{\n"
+                '  "columns": [\n'
+                "    {\n"
+                '      "raw_label": "Item Code",        // Column header text (or null)\n'
+                '      "raw_position": 0,               // Column position in table (integer)\n'
+                '      "table_block_index": 0,          // Table block index (integer)\n'
+                '      "row_index": 5,                  // Header row position (integer)\n'
+                '      "col_index": 2,                  // Column position in sheet (integer)\n'
+                '      "sample_values": ["A", "B"],     // Sample values from column (array)\n'
+                '      "model_confidence": 0.95         // Confidence 0.0-1.0 (optional)\n'
+                "    }\n"
+                "  ]\n"
+                "}\n\n"
+                "All fields except model_confidence are required. sample_values must be an array. "
+                "Return ONLY valid JSON, no other text."
             )
         if context == "line_items":
             return (
                 "You are a line item extraction assistant for invoice templates. "
-                "Analyze the provided table rows and extract individual line items, "
-                "identifying subtotals and non-item rows. Return your response "
-                "as valid JSON only, with no additional text or explanation. "
-                "Use a 'line_items' key containing an array of extracted items."
+                "Analyze the provided table rows and extract individual line items.\n\n"
+                "Return your response as valid JSON matching this exact schema:\n"
+                "{\n"
+                '  "line_items": [\n'
+                "    {\n"
+                '      "table_index": 0,                // Table index (integer)\n'
+                '      "row_index": 6,                  // Row position (integer)\n'
+                '      "is_subtotal": false,            // True if subtotal row (boolean)\n'
+                '      "columns": {"item": "Widget"},   // Column values (object)\n'
+                '      "model_confidence": 0.90         // Confidence 0.0-1.0 (optional)\n'
+                "    }\n"
+                "  ]\n"
+                "}\n\n"
+                "All fields except model_confidence are required. Return ONLY valid JSON, no other text."
             )
         return ""
 
