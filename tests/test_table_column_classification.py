@@ -123,8 +123,8 @@ class TestClassifyTableColumnsSuccess:
         assert result[2].raw_label == "Quantity"
         assert result[2].sample_values == [10, 20]
 
-        # Verify provider was called with correct payload
-        mock_provider.classify_fields.assert_called_once_with(sample_payload)
+        # Verify provider was called with correct payload and context
+        mock_provider.classify_fields.assert_called_once_with(sample_payload, context="columns")
 
     def test_classify_columns_with_metadata(self, mock_provider, sample_payload):
         """Test classification with optional metadata field."""
