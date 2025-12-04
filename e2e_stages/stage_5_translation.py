@@ -20,14 +20,14 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
-
-# Add src to path
+# Add src to path BEFORE imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from template_sense.ai.translation import translate_labels
-from template_sense.ai_providers.factory import get_ai_provider
-from template_sense.constants import DEFAULT_TARGET_LANGUAGE
+from template_sense.ai.translation import translate_labels  # noqa: E402
+from template_sense.ai_providers.factory import get_ai_provider  # noqa: E402
+from template_sense.constants import DEFAULT_TARGET_LANGUAGE  # noqa: E402
+
+load_dotenv()
 
 
 def main():

@@ -66,7 +66,13 @@ TRANSLATION_TIMEOUT_SECONDS = 30  # Timeout for translation requests
 # Mapping/Normalization Constants
 # ============================================================
 
-# (Reserved for future constants as other modules are implemented)
+# AI Semantic Matching Configuration
+ENABLE_AI_SEMANTIC_MATCHING = False  # Feature flag for AI-powered semantic field matching
+SEMANTIC_MATCHING_CONFIDENCE_THRESHOLD = (
+    0.7  # Minimum AI confidence to accept semantic match (0.0-1.0)
+)
+SEMANTIC_MATCHING_FUZZY_FLOOR = 30.0  # Minimum fuzzy score to attempt semantic matching (0.0-100.0)
+SEMANTIC_MATCHING_TIMEOUT_SECONDS = 10  # Timeout for semantic matching AI requests
 
 # ============================================================
 # Error Recovery Thresholds

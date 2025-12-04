@@ -52,7 +52,13 @@ from dataclasses import dataclass
 from rapidfuzz import fuzz
 
 from template_sense.ai.translation import TranslatedLabel
-from template_sense.constants import DEFAULT_AUTO_MAPPING_THRESHOLD
+from template_sense.ai_providers.interface import AIProvider
+from template_sense.constants import (
+    DEFAULT_AUTO_MAPPING_THRESHOLD,
+    ENABLE_AI_SEMANTIC_MATCHING,
+    SEMANTIC_MATCHING_CONFIDENCE_THRESHOLD,
+    SEMANTIC_MATCHING_FUZZY_FLOOR,
+)
 
 # Set up module logger
 logger = logging.getLogger(__name__)
@@ -247,19 +253,29 @@ def match_fields(
     translated_labels: list[TranslatedLabel],
     field_dictionary: dict[str, list[str]],
     threshold: float = DEFAULT_AUTO_MAPPING_THRESHOLD,
+    ai_provider: AIProvider | None = None,
+    enable_semantic_matching: bool = ENABLE_AI_SEMANTIC_MATCHING,
+    semantic_confidence_threshold: float = SEMANTIC_MATCHING_CONFIDENCE_THRESHOLD,
 ) -> list[FieldMatchResult]:
     """
-    Match translated labels to canonical field keys using fuzzy matching.
+    Match translated labels to canonical field keys using fuzzy matching,
+    with optional AI semantic matching fallback.
 
     This is the main public API for the fuzzy matching layer. It takes a list
     of translated labels (from the translation layer) and maps them to Tako's
-    canonical field dictionary using deterministic fuzzy matching.
+    canonical field dictionary using deterministic fuzzy matching. Optionally,
+    if fuzzy matching fails and AI semantic matching is enabled, it will use
+    AI to determine semantic equivalence.
 
     Behavior:
-    - For each label, compares against all canonical keys and variants
+    - For each label, compares against all canonical keys and variants (fuzzy matching)
     - Returns best match with score >= threshold
+    - If fuzzy match fails (<threshold) and enable_semantic_matching=True and ai_provider provided:
+      * Attempts AI semantic matching for scores >= SEMANTIC_MATCHING_FUZZY_FLOOR (30%)
+      * Uses AI to determine semantic equivalence (e.g., "FROM" → "shipper")
+      * Returns semantic match if AI confidence >= semantic_confidence_threshold
     - If no match meets threshold, returns FieldMatchResult with canonical_key=None
-    - Deterministic: same inputs always produce same outputs
+    - Deterministic fuzzy matching: same inputs always produce same outputs
     - Tie-breaking: lexicographic order of canonical_key
 
     Args:
@@ -268,9 +284,15 @@ def match_fields(
         field_dictionary: Tako's canonical field dictionary.
                          Format: {canonical_key: [variant1, variant2, ...]}
                          Example: {"invoice_number": ["Invoice No", "Inv #", "請求書番号"]}
-        threshold: Minimum match score (0-100) to accept a match.
+        threshold: Minimum match score (0-100) to accept a fuzzy match.
                   Default: 80.0 (from DEFAULT_AUTO_MAPPING_THRESHOLD).
                   Recommended: 80-95 for good matches.
+        ai_provider: Optional AI provider for semantic matching fallback.
+                    If None or enable_semantic_matching=False, only fuzzy matching is used.
+        enable_semantic_matching: Feature flag to enable AI semantic matching fallback.
+                                 Default: False (from ENABLE_AI_SEMANTIC_MATCHING constant).
+        semantic_confidence_threshold: Minimum AI confidence (0.0-1.0) to accept semantic match.
+                                      Default: 0.7 (70%).
 
     Returns:
         List of FieldMatchResult objects (one per input label, same order).
@@ -282,19 +304,21 @@ def match_fields(
 
     Example:
         >>> from template_sense.ai.translation import TranslatedLabel
+        >>> from template_sense.ai_providers.factory import get_ai_provider
         >>> field_dict = {
         ...     "invoice_number": ["Invoice Number", "Invoice No"],
-        ...     "due_date": ["Due Date", "Payment Due"],
+        ...     "shipper": ["Shipper", "Sender", "From"],
         ... }
         >>> labels = [
         ...     TranslatedLabel("請求書番号", "Invoice Number", "ja"),
-        ...     TranslatedLabel("payment due", "payment due", "en"),
+        ...     TranslatedLabel("FROM", "FROM", "en"),
         ... ]
-        >>> results = match_fields(labels, field_dict)
+        >>> ai_provider = get_ai_provider()
+        >>> results = match_fields(labels, field_dict, ai_provider=ai_provider, enable_semantic_matching=True)
         >>> for r in results:
         ...     print(f"{r.translated_text} → {r.canonical_key}")
         Invoice Number → invoice_number
-        payment due → due_date
+        FROM → shipper  # Matched via AI semantic matching!
     """
     # Validate threshold
     if not (0.0 <= threshold <= 100.0):
@@ -313,41 +337,111 @@ def match_fields(
         f"{len(field_dictionary)} canonical keys (threshold={threshold:.1f})"
     )
 
+    # Check if semantic matching is available
+    semantic_matching_available = enable_semantic_matching and ai_provider is not None
+    if semantic_matching_available:
+        logger.info("AI semantic matching enabled as fallback for low-confidence matches")
+
     # Process each translated label
     results: list[FieldMatchResult] = []
     matched_count = 0
     unmatched_count = 0
+    semantic_matched_count = 0
 
     for translated_label in translated_labels:
         # Extract translated text for matching
         translated_text = translated_label.translated_text
 
-        # Find best match
+        # Step 1: Try fuzzy matching first
         canonical_key, match_score, matched_variant = _find_best_match(
             translated_text, field_dictionary, threshold
         )
 
-        # Build result
+        # Step 2: If fuzzy succeeded, use it
+        if canonical_key is not None:
+            result = FieldMatchResult(
+                original_text=translated_label.original_text,
+                translated_text=translated_text,
+                canonical_key=canonical_key,
+                match_score=match_score,
+                matched_variant=matched_variant,
+            )
+            results.append(result)
+            matched_count += 1
+            continue
+
+        # Step 3: If fuzzy failed and semantic matching available, try semantic matching
+        if semantic_matching_available and match_score >= SEMANTIC_MATCHING_FUZZY_FLOOR:
+            # Lazy import to avoid circular dependency
+            from template_sense.mapping.semantic_field_matching import (
+                semantic_match_field,
+            )
+
+            logger.debug(
+                f"Fuzzy match failed for '{translated_text}' (score: {match_score:.1f}%), "
+                f"attempting semantic matching"
+            )
+
+            try:
+                semantic_result = semantic_match_field(
+                    translated_label=translated_text,
+                    field_dictionary=field_dictionary,
+                    ai_provider=ai_provider,
+                    best_fuzzy_score=match_score,
+                    confidence_threshold=semantic_confidence_threshold,
+                )
+
+                # If semantic match succeeded, use it
+                if (
+                    semantic_result.canonical_key is not None
+                    and semantic_result.semantic_confidence >= semantic_confidence_threshold
+                ):
+                    result = FieldMatchResult(
+                        original_text=translated_label.original_text,
+                        translated_text=translated_text,
+                        canonical_key=semantic_result.canonical_key,
+                        match_score=semantic_result.semantic_confidence
+                        * 100,  # Convert to 0-100 scale
+                        matched_variant=f"AI Semantic: {semantic_result.reasoning}",
+                    )
+                    results.append(result)
+                    matched_count += 1
+                    semantic_matched_count += 1
+                    logger.info(
+                        f"Semantic match found: '{translated_text}' → '{semantic_result.canonical_key}' "
+                        f"(AI confidence: {semantic_result.semantic_confidence:.0%})"
+                    )
+                    continue
+
+            except Exception as e:
+                logger.warning(
+                    f"Semantic matching failed for '{translated_text}': {str(e)}. "
+                    f"Falling back to fuzzy result."
+                )
+
+        # Step 4: No match found (neither fuzzy nor semantic)
         result = FieldMatchResult(
             original_text=translated_label.original_text,
             translated_text=translated_text,
-            canonical_key=canonical_key,
+            canonical_key=None,
             match_score=match_score,
-            matched_variant=matched_variant,
+            matched_variant=None,
         )
         results.append(result)
-
-        # Track statistics
-        if canonical_key is not None:
-            matched_count += 1
-        else:
-            unmatched_count += 1
+        unmatched_count += 1
 
     # Log summary
-    logger.info(
-        f"Fuzzy matching complete: {matched_count} matched, {unmatched_count} unmatched "
-        f"(total: {len(translated_labels)})"
-    )
+    if semantic_matched_count > 0:
+        logger.info(
+            f"Fuzzy matching complete: {matched_count} matched "
+            f"({semantic_matched_count} via AI semantic), {unmatched_count} unmatched "
+            f"(total: {len(translated_labels)})"
+        )
+    else:
+        logger.info(
+            f"Fuzzy matching complete: {matched_count} matched, {unmatched_count} unmatched "
+            f"(total: {len(translated_labels)})"
+        )
 
     return results
 
