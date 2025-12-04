@@ -168,5 +168,49 @@ class AIProvider(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def generate_text(
+        self,
+        prompt: str,
+        system_message: str | None = None,
+        max_tokens: int = 150,
+        temperature: float = 0.0,
+        json_mode: bool = True,
+    ) -> str:
+        """
+        Generate text response for arbitrary prompts.
+
+        Provides generic interface for text generation tasks beyond
+        structured field classification (e.g., semantic matching).
+        This method enables provider-agnostic text generation without
+        exposing provider-specific implementation details.
+
+        Args:
+            prompt: The user prompt/question to send to the AI
+            system_message: Optional system instruction to guide behavior
+            max_tokens: Maximum tokens in response (default: 150)
+            temperature: Sampling temperature - 0.0 for deterministic, higher for creative (default: 0.0)
+            json_mode: Whether to request JSON-formatted response (default: True)
+
+        Returns:
+            Generated text response from the AI provider
+
+        Raises:
+            AIProviderError: If the API request fails or returns invalid data
+            ValueError: If prompt is empty or invalid
+
+        Example:
+            >>> response = provider.generate_text(
+            ...     prompt="Classify this field: Invoice No",
+            ...     system_message="You are a field mapping expert. Return only valid JSON.",
+            ...     max_tokens=150,
+            ...     temperature=0.0,
+            ...     json_mode=True
+            ... )
+            >>> print(response)
+            '{"matched_key": "invoice_number", "confidence": 0.95}'
+        """
+        raise NotImplementedError
+
 
 __all__ = ["AIProvider"]

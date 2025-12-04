@@ -128,5 +128,53 @@ class OpenAIProvider(BaseAIProvider):
         content = response.choices[0].message.content
         return content or ""
 
+    def _call_generate_api(
+        self,
+        prompt: str,
+        system_message: str | None,
+        max_tokens: int,
+        temperature: float,
+        json_mode: bool,
+    ) -> str:
+        """
+        Execute OpenAI API call for text generation.
+
+        Args:
+            prompt: User prompt/question
+            system_message: Optional system instruction
+            max_tokens: Maximum tokens in response
+            temperature: Sampling temperature (0.0-1.0)
+            json_mode: Whether to request JSON-formatted response
+
+        Returns:
+            Generated text from OpenAI API
+
+        Raises:
+            OpenAI API exceptions (will be wrapped by BaseAIProvider)
+        """
+        messages = []
+
+        # Add system message if provided
+        if system_message:
+            messages.append({"role": "system", "content": system_message})
+
+        messages.append({"role": "user", "content": prompt})
+
+        # Build request parameters
+        request_params = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+
+        # Add JSON mode if requested
+        if json_mode:
+            request_params["response_format"] = {"type": "json_object"}
+
+        response = self.client.chat.completions.create(**request_params)
+        content = response.choices[0].message.content
+        return content or ""
+
 
 __all__ = ["OpenAIProvider"]

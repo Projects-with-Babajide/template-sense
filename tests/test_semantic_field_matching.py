@@ -34,22 +34,8 @@ def mock_ai_provider():
     provider.provider_name = "openai"
     provider.model = "gpt-4"
 
-    # Mock the client attribute for direct API calls
-    mock_client = Mock()
-
-    # Create a proper mock structure matching OpenAI's response
-    # response.choices[0].message.content
-    mock_message = Mock()
-    mock_choice = Mock()
-    mock_choice.message = mock_message
-
-    mock_response = Mock()
-    mock_response.choices = [mock_choice]
-
-    mock_client.chat.completions.create.return_value = mock_response
-
-    provider.client = mock_client
-    provider._mock_message = mock_message  # Store for test access to set .content
+    # Mock the generate_text method (provider-agnostic interface)
+    provider.generate_text = Mock()
 
     return provider
 
@@ -104,7 +90,7 @@ def test_semantic_match_from_to_shipper(mock_ai_provider, sample_field_dictionar
             "reasoning": "'FROM' indicates sender/shipper in logistics context",
         }
     )
-    mock_ai_provider._mock_message.content = mock_response_json
+    mock_ai_provider.generate_text.return_value = mock_response_json
 
     result = semantic_match_field(
         translated_label="FROM",
@@ -131,7 +117,7 @@ def test_semantic_match_to_to_consignee(mock_ai_provider, sample_field_dictionar
             "reasoning": "'TO' indicates receiver/consignee in logistics context",
         }
     )
-    mock_ai_provider._mock_message.content = mock_response
+    mock_ai_provider.generate_text.return_value = mock_response
 
     result = semantic_match_field(
         translated_label="TO",
@@ -155,7 +141,7 @@ def test_semantic_match_shipment_day_to_etd(mock_ai_provider, sample_field_dicti
             "reasoning": "Shipment day represents departure date (ETD)",
         }
     )
-    mock_ai_provider._mock_message.content = mock_response
+    mock_ai_provider.generate_text.return_value = mock_response
 
     result = semantic_match_field(
         translated_label="SHIPMENT DAY",
@@ -184,7 +170,7 @@ def test_semantic_match_items_to_product_name(mock_ai_provider, sample_field_dic
             "reasoning": "'Items' refers to product/item descriptions in invoice tables",
         }
     )
-    mock_ai_provider._mock_message.content = mock_response
+    mock_ai_provider.generate_text.return_value = mock_response
 
     result = semantic_match_field(
         translated_label="Items",
@@ -207,7 +193,7 @@ def test_semantic_match_item_no_to_item_number(mock_ai_provider, sample_field_di
             "reasoning": "'Item/NO' is a common abbreviation for item number",
         }
     )
-    mock_ai_provider._mock_message.content = mock_response
+    mock_ai_provider.generate_text.return_value = mock_response
 
     result = semantic_match_field(
         translated_label="Item/NO",
@@ -235,7 +221,7 @@ def test_semantic_match_below_threshold_rejected(mock_ai_provider, sample_field_
             "reasoning": "Possible but uncertain match",
         }
     )
-    mock_ai_provider._mock_message.content = mock_response
+    mock_ai_provider.generate_text.return_value = mock_response
 
     result = semantic_match_field(
         translated_label="SENDER",
@@ -259,7 +245,7 @@ def test_semantic_match_no_match_response(mock_ai_provider, sample_field_diction
             "reasoning": "No semantic equivalence found",
         }
     )
-    mock_ai_provider._mock_message.content = mock_response
+    mock_ai_provider.generate_text.return_value = mock_response
 
     result = semantic_match_field(
         translated_label="RANDOM_FIELD",
@@ -287,7 +273,7 @@ def test_semantic_match_handles_markdown_code_blocks(mock_ai_provider, sample_fi
   "reasoning": "FROM indicates shipper"
 }
 ```"""
-    mock_ai_provider._mock_message.content = mock_response
+    mock_ai_provider.generate_text.return_value = mock_response
 
     result = semantic_match_field(
         translated_label="FROM",
@@ -310,7 +296,7 @@ def test_semantic_match_handles_plain_code_blocks(mock_ai_provider, sample_field
   "reasoning": "TO indicates consignee"
 }
 ```"""
-    mock_ai_provider._mock_message.content = mock_response
+    mock_ai_provider.generate_text.return_value = mock_response
 
     result = semantic_match_field(
         translated_label="TO",
@@ -327,7 +313,7 @@ def test_semantic_match_handles_plain_code_blocks(mock_ai_provider, sample_field
 def test_semantic_match_handles_invalid_json(mock_ai_provider, sample_field_dictionary):
     """Test: Gracefully handles invalid JSON response."""
     mock_response = "This is not valid JSON"
-    mock_ai_provider._mock_message.content = mock_response
+    mock_ai_provider.generate_text.return_value = mock_response
 
     result = semantic_match_field(
         translated_label="FROM",
@@ -350,8 +336,8 @@ def test_semantic_match_handles_invalid_json(mock_ai_provider, sample_field_dict
 
 def test_semantic_match_handles_ai_provider_error(mock_ai_provider, sample_field_dictionary):
     """Test: Gracefully handles AIProviderError."""
-    # Make the client API call raise an error
-    mock_ai_provider.client.chat.completions.create.side_effect = AIProviderError(
+    # Make the generate_text call raise an error
+    mock_ai_provider.generate_text.side_effect = AIProviderError(
         provider_name="openai",
         error_details="API rate limit exceeded",
     )
@@ -394,7 +380,7 @@ def test_semantic_match_handles_unexpected_error(mock_ai_provider, sample_field_
 
 def test_batch_semantic_matching(mock_ai_provider, sample_field_dictionary):
     """Test: Batch process multiple unmatched fields."""
-    # Mock AI responses for each call (set on _mock_message.content)
+    # Mock AI responses for each call using side_effect
     responses = [
         json.dumps({"canonical_key": "shipper", "confidence": 0.95, "reasoning": "FROM = shipper"}),
         json.dumps(
@@ -402,24 +388,7 @@ def test_batch_semantic_matching(mock_ai_provider, sample_field_dictionary):
         ),
         json.dumps({"canonical_key": "etd", "confidence": 0.85, "reasoning": "SHIPMENT DAY = ETD"}),
     ]
-    # Use side_effect on _mock_message.content to return different values for each call
-    mock_ai_provider._mock_message.content = responses[0]  # First response
-
-    # For batch processing, we need to handle multiple calls
-    # Store all responses and cycle through them
-    response_iter = iter(responses)
-
-    def get_next_response(*args, **kwargs):
-        # Create new mock response for each call
-        mock_msg = Mock()
-        mock_msg.content = next(response_iter)
-        mock_choice = Mock()
-        mock_choice.message = mock_msg
-        mock_resp = Mock()
-        mock_resp.choices = [mock_choice]
-        return mock_resp
-
-    mock_ai_provider.client.chat.completions.create.side_effect = get_next_response
+    mock_ai_provider.generate_text.side_effect = responses
 
     unmatched = [
         ("FROM", 33.3),
@@ -446,19 +415,7 @@ def test_batch_semantic_matching_partial_matches(mock_ai_provider, sample_field_
         json.dumps({"canonical_key": "shipper", "confidence": 0.95, "reasoning": "FROM = shipper"}),
         json.dumps({"canonical_key": None, "confidence": 0.0, "reasoning": "No match"}),
     ]
-
-    response_iter = iter(responses)
-
-    def get_next_response(*args, **kwargs):
-        mock_msg = Mock()
-        mock_msg.content = next(response_iter)
-        mock_choice = Mock()
-        mock_choice.message = mock_msg
-        mock_resp = Mock()
-        mock_resp.choices = [mock_choice]
-        return mock_resp
-
-    mock_ai_provider.client.chat.completions.create.side_effect = get_next_response
+    mock_ai_provider.generate_text.side_effect = responses
 
     unmatched = [
         ("FROM", 33.3),
