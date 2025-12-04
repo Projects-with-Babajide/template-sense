@@ -307,7 +307,7 @@ class TestAnthropicProviderClassifyFields:
             provider.classify_fields(sample_payload)
 
         error = exc_info.value
-        assert "Empty text in response content" in error.error_details
+        assert "Empty response from API" in error.error_details
 
     def test_classify_fields_invalid_json(self, provider, sample_payload):
         """Test classification with invalid JSON response."""
@@ -434,7 +434,7 @@ class TestAnthropicProviderTranslateText:
             provider.translate_text("test", source_lang="ja")
 
         error = exc_info.value
-        assert "Empty text in translation response" in error.error_details
+        assert "Empty translation response from API" in error.error_details
 
     def test_translate_text_strips_whitespace(self, provider):
         """Test translation strips leading/trailing whitespace."""

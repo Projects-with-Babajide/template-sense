@@ -55,6 +55,18 @@ LOG_LEVEL_ENV_VAR = "TEMPLATE_SENSE_LOG_LEVEL"
 # Supported providers
 SUPPORTED_AI_PROVIDERS = ("openai", "anthropic")
 
+# Default AI models
+DEFAULT_OPENAI_MODEL = "gpt-4"
+DEFAULT_ANTHROPIC_MODEL = "claude-3-sonnet-20240229"
+
+# AI temperature settings
+AI_CLASSIFICATION_TEMPERATURE = 0.0  # Deterministic for classification
+AI_TRANSLATION_TEMPERATURE = 0.3  # Slight creativity for natural translations
+
+# Anthropic-specific limits
+ANTHROPIC_CLASSIFICATION_MAX_TOKENS = 4096
+ANTHROPIC_TRANSLATION_MAX_TOKENS = 2048
+
 # ============================================================
 # Translation Constants
 # ============================================================
@@ -130,6 +142,12 @@ __all__ = [
     "ANTHROPIC_API_KEY_ENV_VAR",
     "LOG_LEVEL_ENV_VAR",
     "SUPPORTED_AI_PROVIDERS",
+    "DEFAULT_OPENAI_MODEL",
+    "DEFAULT_ANTHROPIC_MODEL",
+    "AI_CLASSIFICATION_TEMPERATURE",
+    "AI_TRANSLATION_TEMPERATURE",
+    "ANTHROPIC_CLASSIFICATION_MAX_TOKENS",
+    "ANTHROPIC_TRANSLATION_MAX_TOKENS",
     "DEFAULT_TARGET_LANGUAGE",
     "TRANSLATION_TIMEOUT_SECONDS",
     "MIN_AI_CONFIDENCE_WARNING",

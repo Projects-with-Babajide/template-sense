@@ -8,21 +8,26 @@ for Anthropic's API (Claude models). It handles:
 - Error handling and timeout management
 """
 
-import json
 import logging
-from typing import Any
 
-from anthropic import Anthropic, APIError, APITimeoutError, AuthenticationError
+from anthropic import Anthropic
 
+from template_sense.ai_providers.base_provider import BaseAIProvider
 from template_sense.ai_providers.config import AIConfig
-from template_sense.ai_providers.interface import AIProvider
-from template_sense.constants import DEFAULT_AI_TIMEOUT_SECONDS
+from template_sense.constants import (
+    AI_CLASSIFICATION_TEMPERATURE,
+    AI_TRANSLATION_TEMPERATURE,
+    ANTHROPIC_CLASSIFICATION_MAX_TOKENS,
+    ANTHROPIC_TRANSLATION_MAX_TOKENS,
+    DEFAULT_AI_TIMEOUT_SECONDS,
+    DEFAULT_ANTHROPIC_MODEL,
+)
 from template_sense.errors import AIProviderError
 
 logger = logging.getLogger(__name__)
 
 
-class AnthropicProvider(AIProvider):
+class AnthropicProvider(BaseAIProvider):
     """
     Anthropic API provider implementation.
 
@@ -70,340 +75,63 @@ class AnthropicProvider(AIProvider):
     @property
     def model(self) -> str:
         """Returns the configured model or default 'claude-3-sonnet-20240229'."""
-        return self.config.model or "claude-3-sonnet-20240229"
+        return self.config.model or DEFAULT_ANTHROPIC_MODEL
 
-    def classify_fields(self, payload: dict[str, Any], context: str = "headers") -> dict[str, Any]:
+    def _call_classify_api(self, system_message: str, user_message: str) -> str:
         """
-        Classify header fields and table columns using Anthropic.
-
-        Sends the AI payload to Anthropic with instructions to classify fields
-        semantically and return structured JSON.
+        Execute Anthropic API call for classification.
 
         Args:
-            payload: AI payload dict from build_ai_payload()
-            context: Classification context - "headers", "columns", or "line_items"
+            system_message: System prompt for classification
+            user_message: User prompt with payload data
 
         Returns:
-            Dict with classification results (structure depends on context)
+            Raw response text from Anthropic API
 
         Raises:
-            AIProviderError: On API errors, timeouts, or invalid responses
-            ValueError: If context is not a supported value
+            Anthropic API exceptions (will be wrapped by BaseAIProvider)
         """
-        # Validate context
-        if context not in ["headers", "columns", "line_items"]:
-            raise ValueError(
-                f"Invalid context: {context}. Must be 'headers', 'columns', or 'line_items'"
-            )
-
-        try:
-            # Build context-aware prompts
-            system_message = self._build_system_prompt(context)
-            user_message = self._build_user_prompt(payload, context)
-
-            logger.debug(
-                "Sending classify_fields request to Anthropic (model=%s, context=%s)",
-                self.model,
-                context,
-            )
-
-            # Call Anthropic API
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=4096,  # Sufficient for classification responses
-                temperature=0.0,  # Deterministic for classification
-                system=system_message,
-                messages=[{"role": "user", "content": user_message}],
-            )
-
-            # Extract response content
-            if not response.content:
-                raise AIProviderError(
-                    provider_name="anthropic",
-                    error_details="Empty response from API",
-                    request_type="classify_fields",
-                )
-
-            # Anthropic returns a list of content blocks
-            content = response.content[0].text
-
-            if not content:
-                raise AIProviderError(
-                    provider_name="anthropic",
-                    error_details="Empty text in response content",
-                    request_type="classify_fields",
-                )
-
-            try:
-                result = json.loads(content)
-                logger.debug("Successfully parsed JSON response from Anthropic")
-
-                # Validate expected response key
-                expected_key = self._get_expected_response_key(context)
-                if expected_key not in result:
-                    raise AIProviderError(
-                        provider_name="anthropic",
-                        error_details=f"Response missing '{expected_key}' key for context '{context}'",
-                        request_type="classify_fields",
-                    )
-
-                return result
-            except json.JSONDecodeError as e:
-                raise AIProviderError(
-                    provider_name="anthropic",
-                    error_details=f"Invalid JSON in response: {str(e)}",
-                    request_type="classify_fields",
-                ) from e
-
-        except AuthenticationError as e:
-            raise AIProviderError(
-                provider_name="anthropic",
-                error_details=f"Authentication failed: {str(e)}",
-                request_type="classify_fields",
-            ) from e
-        except APITimeoutError as e:
-            raise AIProviderError(
-                provider_name="anthropic",
-                error_details=f"Request timed out: {str(e)}",
-                request_type="classify_fields",
-            ) from e
-        except APIError as e:
-            raise AIProviderError(
-                provider_name="anthropic",
-                error_details=f"API error: {str(e)}",
-                request_type="classify_fields",
-            ) from e
-        except AIProviderError:
-            # Re-raise our own errors
-            raise
-        except ValueError:
-            # Re-raise validation errors
-            raise
-        except Exception as e:
-            # Catch any unexpected errors
-            raise AIProviderError(
-                provider_name="anthropic",
-                error_details=f"Unexpected error: {str(e)}",
-                request_type="classify_fields",
-            ) from e
-
-    def _build_system_prompt(self, context: str) -> str:
-        """
-        Build context-aware system prompt.
-
-        Args:
-            context: Classification context
-
-        Returns:
-            System prompt string tailored to the context
-        """
-        if context == "headers":
-            return (
-                "You are a field classification assistant for invoice templates. "
-                "Analyze the provided header fields and classify each field "
-                "semantically based on common invoice terminology.\n\n"
-                "PATTERN DETECTION:\n"
-                "1. Multi-cell patterns: Label in one cell, value in adjacent cell\n"
-                "   - Check adjacent_cells to find related values\n"
-                "   - Common patterns: label on left, value on right (or above/below)\n"
-                '   - Example: "Invoice:" in col 1, "12345" in col 3 (right_2)\n'
-                "2. Same-cell patterns: Label and value in same cell with delimiter\n"
-                '   - Common delimiters: ":", "-", "=", "|"\n'
-                '   - Example: "Invoice Number: INV-12345"\n\n'
-                "When you detect these patterns, populate both raw_label and raw_value fields. "
-                "Set label_col_offset and value_col_offset to indicate where label/value are "
-                "relative to the main cell (0 = same cell, positive = cells to the right).\n\n"
-                "Return your response as valid JSON matching this exact schema:\n"
-                "{\n"
-                '  "headers": [\n'
-                "    {\n"
-                '      "raw_label": "Invoice Number",  // The label text (or null)\n'
-                '      "raw_value": "INV-12345",       // The value text (or null)\n'
-                '      "block_index": 0,               // Header block index (integer)\n'
-                '      "row_index": 1,                 // Row position (integer)\n'
-                '      "col_index": 1,                 // Column position (integer)\n'
-                '      "label_col_offset": 0,          // Offset from main cell to label (optional, default 0)\n'
-                '      "value_col_offset": 2,          // Offset from main cell to value (optional, default 0)\n'
-                '      "pattern_type": "multi_cell",   // "multi_cell", "same_cell", or null (optional)\n'
-                '      "model_confidence": 0.95        // Confidence 0.0-1.0 (optional)\n'
-                "    }\n"
-                "  ]\n"
-                "}\n\n"
-                "Required fields: raw_label, raw_value, block_index, row_index, col_index.\n"
-                "Optional fields: label_col_offset, value_col_offset, pattern_type, model_confidence.\n"
-                "Return ONLY valid JSON, no other text."
-            )
-        if context == "columns":
-            return (
-                "You are a table column classification assistant for invoice templates. "
-                "Analyze the provided table columns and classify each column "
-                "semantically based on common invoice table structures.\n\n"
-                "Return your response as valid JSON matching this exact schema:\n"
-                "{\n"
-                '  "columns": [\n'
-                "    {\n"
-                '      "raw_label": "Item Code",        // Column header text (or null)\n'
-                '      "raw_position": 0,               // Column position in table (integer)\n'
-                '      "table_block_index": 0,          // Table block index (integer)\n'
-                '      "row_index": 5,                  // Header row position (integer)\n'
-                '      "col_index": 2,                  // Column position in sheet (integer)\n'
-                '      "sample_values": ["A", "B"],     // Sample values from column (array)\n'
-                '      "model_confidence": 0.95         // Confidence 0.0-1.0 (optional)\n'
-                "    }\n"
-                "  ]\n"
-                "}\n\n"
-                "All fields except model_confidence are required. sample_values must be an array. "
-                "Return ONLY valid JSON, no other text."
-            )
-        if context == "line_items":
-            return (
-                "You are a line item extraction assistant for invoice templates. "
-                "Analyze the provided table rows and extract individual line items.\n\n"
-                "Return your response as valid JSON matching this exact schema:\n"
-                "{\n"
-                '  "line_items": [\n'
-                "    {\n"
-                '      "table_index": 0,                // Table index (integer)\n'
-                '      "row_index": 6,                  // Row position (integer)\n'
-                '      "is_subtotal": false,            // True if subtotal row (boolean)\n'
-                '      "columns": {"item": "Widget"},   // Column values (object)\n'
-                '      "model_confidence": 0.90         // Confidence 0.0-1.0 (optional)\n'
-                "    }\n"
-                "  ]\n"
-                "}\n\n"
-                "All fields except model_confidence are required. Return ONLY valid JSON, no other text."
-            )
-        return ""
-
-    def _build_user_prompt(self, payload: dict[str, Any], context: str) -> str:
-        """
-        Build context-aware user prompt.
-
-        Args:
-            payload: AI payload data
-            context: Classification context
-
-        Returns:
-            User prompt string tailored to the context
-        """
-        context_descriptions = {
-            "headers": "invoice template header fields",
-            "columns": "invoice table columns",
-            "line_items": "invoice table line items",
-        }
-
-        description = context_descriptions.get(context, "invoice template fields")
-
-        return (
-            f"Please classify the following {description}:\n\n"
-            f"{json.dumps(payload, indent=2)}\n\n"
-            "Respond with a JSON object containing your classifications. "
-            "Return ONLY the JSON, no other text."
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=ANTHROPIC_CLASSIFICATION_MAX_TOKENS,
+            temperature=AI_CLASSIFICATION_TEMPERATURE,
+            system=system_message,
+            messages=[{"role": "user", "content": user_message}],
         )
 
-    def _get_expected_response_key(self, context: str) -> str:
+        if not response.content:
+            return ""
+
+        content = response.content[0].text
+        return content or ""
+
+    def _call_translate_api(self, system_message: str, user_message: str) -> str:
         """
-        Get expected response key for context.
+        Execute Anthropic API call for translation.
 
         Args:
-            context: Classification context
+            system_message: System prompt for translation
+            user_message: Text to translate
 
         Returns:
-            Expected top-level key in response JSON
-        """
-        mapping = {
-            "headers": "headers",
-            "columns": "columns",
-            "line_items": "line_items",
-        }
-        return mapping[context]
-
-    def translate_text(self, text: str, source_lang: str, target_lang: str = "en") -> str:
-        """
-        Translate text using Anthropic.
-
-        Args:
-            text: Text to translate
-            source_lang: Source language code (e.g., "ja", "zh")
-            target_lang: Target language code (default: "en")
-
-        Returns:
-            Translated text
+            Translated text from Anthropic API
 
         Raises:
-            AIProviderError: On API errors, timeouts, or invalid responses
+            Anthropic API exceptions (will be wrapped by BaseAIProvider)
         """
-        try:
-            system_message = (
-                f"You are a professional translator. Translate the given text "
-                f"from {source_lang} to {target_lang}. "
-                f"Return only the translated text, nothing else."
-            )
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=ANTHROPIC_TRANSLATION_MAX_TOKENS,
+            temperature=AI_TRANSLATION_TEMPERATURE,
+            system=system_message,
+            messages=[{"role": "user", "content": user_message}],
+        )
 
-            user_message = text
+        if not response.content:
+            return ""
 
-            logger.debug(
-                "Sending translate_text request to Anthropic (model=%s, %s→%s)",
-                self.model,
-                source_lang,
-                target_lang,
-            )
-
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=2048,  # Sufficient for most translations
-                temperature=0.3,  # Slight creativity for natural translations
-                system=system_message,
-                messages=[{"role": "user", "content": user_message}],
-            )
-
-            if not response.content:
-                raise AIProviderError(
-                    provider_name="anthropic",
-                    error_details="Empty translation response from API",
-                    request_type="translate_text",
-                )
-
-            translated = response.content[0].text
-
-            if not translated:
-                raise AIProviderError(
-                    provider_name="anthropic",
-                    error_details="Empty text in translation response",
-                    request_type="translate_text",
-                )
-
-            logger.debug("Successfully translated text via Anthropic")
-            return translated.strip()
-
-        except AuthenticationError as e:
-            raise AIProviderError(
-                provider_name="anthropic",
-                error_details=f"Authentication failed: {str(e)}",
-                request_type="translate_text",
-            ) from e
-        except APITimeoutError as e:
-            raise AIProviderError(
-                provider_name="anthropic",
-                error_details=f"Request timed out: {str(e)}",
-                request_type="translate_text",
-            ) from e
-        except APIError as e:
-            raise AIProviderError(
-                provider_name="anthropic",
-                error_details=f"API error: {str(e)}",
-                request_type="translate_text",
-            ) from e
-        except AIProviderError:
-            # Re-raise our own errors
-            raise
-        except Exception as e:
-            # Catch any unexpected errors
-            raise AIProviderError(
-                provider_name="anthropic",
-                error_details=f"Unexpected error: {str(e)}",
-                request_type="translate_text",
-            ) from e
+        content = response.content[0].text
+        return content or ""
 
 
 __all__ = ["AnthropicProvider"]
