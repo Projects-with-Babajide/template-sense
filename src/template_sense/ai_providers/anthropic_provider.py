@@ -202,6 +202,17 @@ class AnthropicProvider(AIProvider):
                 "You are a field classification assistant for invoice templates. "
                 "Analyze the provided header fields and classify each field "
                 "semantically based on common invoice terminology.\n\n"
+                "PATTERN DETECTION:\n"
+                "1. Multi-cell patterns: Label in one cell, value in adjacent cell\n"
+                "   - Check adjacent_cells to find related values\n"
+                "   - Common patterns: label on left, value on right (or above/below)\n"
+                '   - Example: "Invoice:" in col 1, "12345" in col 3 (right_2)\n'
+                "2. Same-cell patterns: Label and value in same cell with delimiter\n"
+                '   - Common delimiters: ":", "-", "=", "|"\n'
+                '   - Example: "Invoice Number: INV-12345"\n\n'
+                "When you detect these patterns, populate both raw_label and raw_value fields. "
+                "Set label_col_offset and value_col_offset to indicate where label/value are "
+                "relative to the main cell (0 = same cell, positive = cells to the right).\n\n"
                 "Return your response as valid JSON matching this exact schema:\n"
                 "{\n"
                 '  "headers": [\n'
@@ -211,11 +222,16 @@ class AnthropicProvider(AIProvider):
                 '      "block_index": 0,               // Header block index (integer)\n'
                 '      "row_index": 1,                 // Row position (integer)\n'
                 '      "col_index": 1,                 // Column position (integer)\n'
+                '      "label_col_offset": 0,          // Offset from main cell to label (optional, default 0)\n'
+                '      "value_col_offset": 2,          // Offset from main cell to value (optional, default 0)\n'
+                '      "pattern_type": "multi_cell",   // "multi_cell", "same_cell", or null (optional)\n'
                 '      "model_confidence": 0.95        // Confidence 0.0-1.0 (optional)\n'
                 "    }\n"
                 "  ]\n"
                 "}\n\n"
-                "All fields except model_confidence are required. Return ONLY valid JSON, no other text."
+                "Required fields: raw_label, raw_value, block_index, row_index, col_index.\n"
+                "Optional fields: label_col_offset, value_col_offset, pattern_type, model_confidence.\n"
+                "Return ONLY valid JSON, no other text."
             )
         if context == "columns":
             return (

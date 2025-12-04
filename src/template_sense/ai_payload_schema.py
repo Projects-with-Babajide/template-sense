@@ -60,7 +60,7 @@ import logging
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from template_sense.constants import DEFAULT_AI_SAMPLE_ROWS
+from template_sense.constants import DEFAULT_ADJACENT_CELL_RADIUS, DEFAULT_AI_SAMPLE_ROWS
 
 # Set up module logger
 logger = logging.getLogger(__name__)
@@ -80,6 +80,9 @@ class AIHeaderCandidate:
         label: The label/key text (e.g., "Invoice Number", "請求書番号")
         value: The associated value (e.g., "12345", "2024-01-01")
         score: Confidence score from heuristic detection (0.0-1.0)
+        adjacent_cells: Optional dict containing values from nearby cells for context.
+                       Keys are directional offsets (e.g., "left_1", "right_2", "above_1").
+                       Values are cell contents (any type, or None for empty/out-of-bounds).
 
     Example:
         >>> header = AIHeaderCandidate(
@@ -87,7 +90,8 @@ class AIHeaderCandidate:
         ...     col=1,
         ...     label="Invoice Number",
         ...     value="INV-12345",
-        ...     score=0.85
+        ...     score=0.85,
+        ...     adjacent_cells={"right_1": "2024-01-01", "below_1": "Paid"}
         ... )
     """
 
@@ -96,6 +100,7 @@ class AIHeaderCandidate:
     label: str
     value: Any
     score: float
+    adjacent_cells: dict[str, Any] | None = None
 
 
 @dataclass
@@ -234,15 +239,108 @@ class AIPayload:
     field_dictionary: dict[str, list[str]]
 
 
-def _convert_header_candidates(header_blocks: list[dict[str, Any]]) -> list[AIHeaderCandidate]:
+def _extract_adjacent_cells(
+    grid: list[list[Any]],
+    row: int,
+    col: int,
+    radius: int = DEFAULT_ADJACENT_CELL_RADIUS,
+) -> dict[str, Any]:
+    """
+    Extract adjacent cell values from grid for context.
+
+    Extracts cells in all four directions (left, right, above, below) up to
+    the specified radius. Keys are formatted as "{direction}_{offset}" where
+    offset is 1-based distance from the source cell.
+
+    Args:
+        grid: 2D grid of cell values (0-indexed: grid[row][col])
+        row: 1-based row index of source cell
+        col: 1-based column index of source cell
+        radius: Maximum number of cells to extract in each direction (default: 3)
+
+    Returns:
+        Dict mapping direction keys to cell values. Example:
+        {
+            "left_1": "Invoice:",
+            "left_2": None,
+            "right_1": "12345",
+            "right_2": None,
+            "above_1": "Header",
+            "below_1": "Footer"
+        }
+
+    Example:
+        >>> grid = [
+        ...     ["A", "B", "C", "D"],
+        ...     ["E", "F", "G", "H"],
+        ...     ["I", "J", "K", "L"],
+        ... ]
+        >>> adjacent = _extract_adjacent_cells(grid, row=2, col=2, radius=2)
+        >>> adjacent["left_1"]
+        'E'
+        >>> adjacent["right_1"]
+        'G'
+    """
+    adjacent = {}
+
+    # Convert to 0-based for grid access
+    row_0 = row - 1
+    col_0 = col - 1
+
+    grid_rows = len(grid)
+    grid_cols = len(grid[0]) if grid_rows > 0 else 0
+
+    # Extract left cells
+    for offset in range(1, radius + 1):
+        target_col = col_0 - offset
+        if target_col >= 0:
+            adjacent[f"left_{offset}"] = grid[row_0][target_col]
+        else:
+            adjacent[f"left_{offset}"] = None
+
+    # Extract right cells
+    for offset in range(1, radius + 1):
+        target_col = col_0 + offset
+        if target_col < grid_cols:
+            adjacent[f"right_{offset}"] = grid[row_0][target_col]
+        else:
+            adjacent[f"right_{offset}"] = None
+
+    # Extract above cells
+    for offset in range(1, radius + 1):
+        target_row = row_0 - offset
+        if target_row >= 0:
+            adjacent[f"above_{offset}"] = grid[target_row][col_0]
+        else:
+            adjacent[f"above_{offset}"] = None
+
+    # Extract below cells
+    for offset in range(1, radius + 1):
+        target_row = row_0 + offset
+        if target_row < grid_rows:
+            adjacent[f"below_{offset}"] = grid[target_row][col_0]
+        else:
+            adjacent[f"below_{offset}"] = None
+
+    return adjacent
+
+
+def _convert_header_candidates(
+    header_blocks: list[dict[str, Any]],
+    grid: list[list[Any]] | None = None,
+    adjacent_cell_radius: int = DEFAULT_ADJACENT_CELL_RADIUS,
+) -> list[AIHeaderCandidate]:
     """
     Convert header blocks from sheet summary to AIHeaderCandidate list.
 
     Extracts label_value_pairs from each header block and flattens them into
-    individual AIHeaderCandidate objects.
+    individual AIHeaderCandidate objects. If grid is provided, also extracts
+    adjacent cell context for AI pattern detection.
 
     Args:
         header_blocks: List of header block dicts from build_sheet_summary()
+        grid: Optional 2D grid of cell values for adjacent cell extraction
+        adjacent_cell_radius: Number of adjacent cells to extract in each direction
 
     Returns:
         List of AIHeaderCandidate objects
@@ -267,19 +365,31 @@ def _convert_header_candidates(header_blocks: list[dict[str, Any]]) -> list[AIHe
         block_score = block.get("score", 0.0)
 
         for pair in block.get("label_value_pairs", []):
+            # Extract adjacent cells if grid is provided
+            adjacent_cells = None
+            if grid is not None:
+                adjacent_cells = _extract_adjacent_cells(
+                    grid=grid,
+                    row=pair["row"],
+                    col=pair["col"],
+                    radius=adjacent_cell_radius,
+                )
+
             candidate = AIHeaderCandidate(
                 row=pair["row"],
                 col=pair["col"],
                 label=pair["label"],
                 value=pair["value"],
                 score=block_score,
+                adjacent_cells=adjacent_cells,
             )
             candidates.append(candidate)
 
     logger.debug(
-        "Converted %d header blocks to %d header candidates",
+        "Converted %d header blocks to %d header candidates (grid_provided=%s)",
         len(header_blocks),
         len(candidates),
+        grid is not None,
     )
 
     return candidates
@@ -415,7 +525,9 @@ def _extract_sample_data_rows(
 def build_ai_payload(
     sheet_summary: dict[str, Any],
     field_dictionary: dict[str, list[str]],
+    grid: list[list[Any]] | None = None,
     max_sample_rows: int = DEFAULT_AI_SAMPLE_ROWS,
+    adjacent_cell_radius: int = DEFAULT_ADJACENT_CELL_RADIUS,
 ) -> dict[str, Any]:
     """
     Build AI payload from sheet summary and field dictionary.
@@ -427,7 +539,9 @@ def build_ai_payload(
     Args:
         sheet_summary: Output from build_sheet_summary() containing header and table blocks
         field_dictionary: Tako's canonical field mapping (key -> multilingual aliases)
+        grid: Optional 2D grid of cell values for adjacent cell context extraction
         max_sample_rows: Maximum number of sample data rows to include per table (default: 5)
+        adjacent_cell_radius: Number of adjacent cells to extract in each direction (default: 3)
 
     Returns:
         JSON-serializable dict with AI payload structure matching AIPayload schema
@@ -453,9 +567,10 @@ def build_ai_payload(
         raise ValueError(f"max_sample_rows must be >= 1, got {max_sample_rows}")
 
     logger.info(
-        "Building AI payload for sheet '%s' (max_sample_rows=%d)",
+        "Building AI payload for sheet '%s' (max_sample_rows=%d, grid_provided=%s)",
         sheet_summary.get("sheet_name", "Unknown"),
         max_sample_rows,
+        grid is not None,
     )
 
     # Extract sheet name
@@ -463,7 +578,11 @@ def build_ai_payload(
 
     # Convert header blocks to header candidates
     header_blocks = sheet_summary.get("header_blocks", [])
-    header_candidates = _convert_header_candidates(header_blocks)
+    header_candidates = _convert_header_candidates(
+        header_blocks=header_blocks,
+        grid=grid,
+        adjacent_cell_radius=adjacent_cell_radius,
+    )
 
     # Convert table blocks to table candidates
     table_blocks = sheet_summary.get("table_blocks", [])
