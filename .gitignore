@@ -225,3 +225,6 @@ tests/fixtures/invoice_templates/*
 ~$*.xls
 ~$*.xlsx
 ~$*.xlsm
+
+# E2E test outputs
+e2e_stages/output/
