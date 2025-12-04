@@ -174,6 +174,9 @@ def main():
             "block_index": h.block_index,
             "row_index": h.row_index,
             "col_index": h.col_index,
+            "label_col_offset": h.label_col_offset,
+            "value_col_offset": h.value_col_offset,
+            "pattern_type": h.pattern_type,
             "model_confidence": h.model_confidence,
             "metadata": h.metadata,
         }

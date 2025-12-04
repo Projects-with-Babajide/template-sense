@@ -19,13 +19,16 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
-
-# Add src to path
+# Add src to path BEFORE imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from template_sense.ai_payload_schema import build_ai_payload
-from template_sense.ai_providers.factory import get_ai_provider
+from template_sense.adapters.excel_adapter import ExcelWorkbook  # noqa: E402
+from template_sense.ai_payload_schema import build_ai_payload  # noqa: E402
+from template_sense.ai_providers.factory import get_ai_provider  # noqa: E402
+from template_sense.extraction.sheet_extractor import extract_raw_grid  # noqa: E402
+from template_sense.file_loader import load_excel_file  # noqa: E402
+
+load_dotenv()
 
 
 def main():
@@ -49,13 +52,26 @@ def main():
         print("Please run previous stages first.")
         sys.exit(1)
 
+    with open(config_file) as f:
+        config = json.load(f)
     with open(field_dict_file) as f:
         field_dictionary = json.load(f)
     with open(sheet_summary_file) as f:
         sheet_summary = json.load(f)
 
+    print(f"✓ Config loaded: {config.get('test_file')}")
     print(f"✓ Field dictionary: {len(field_dictionary)} fields")
     print("✓ Sheet summary loaded")
+
+    # Load Excel file to extract grid for adjacent cell context (BAT-53)
+    print("\n📂 Loading Excel file for grid extraction...")
+    test_file = config.get("test_file")
+    raw_workbook = load_excel_file(Path(test_file))
+    workbook = ExcelWorkbook(raw_workbook)
+    sheet_name = sheet_summary.get("sheet_name", workbook.get_sheet_names()[0])
+    grid = extract_raw_grid(workbook, sheet_name)
+    workbook.close()
+    print(f"✓ Grid extracted: {len(grid)} rows × {len(grid[0]) if grid else 0} columns")
 
     # ========================================================================
     # Stage 4: AI Provider Setup
@@ -73,8 +89,8 @@ def main():
     # ========================================================================
     print("\n🏗️  Stage 5: Building AI payload...")
 
-    ai_payload = build_ai_payload(sheet_summary, field_dictionary)
-    print("✓ AI payload built successfully")
+    ai_payload = build_ai_payload(sheet_summary, field_dictionary, grid=grid)
+    print("✓ AI payload built successfully (with adjacent cell context from BAT-53)")
 
     # Extract statistics
     header_candidates = ai_payload.get("header_candidates", [])
