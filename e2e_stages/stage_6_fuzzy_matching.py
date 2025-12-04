@@ -20,12 +20,21 @@ import sys
 import time
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # ruff: noqa: E402
 from template_sense.ai.translation import TranslatedLabel
-from template_sense.constants import DEFAULT_AUTO_MAPPING_THRESHOLD, DEFAULT_TARGET_LANGUAGE
+from template_sense.constants import (
+    DEFAULT_AUTO_MAPPING_THRESHOLD,
+    DEFAULT_TARGET_LANGUAGE,
+    ENABLE_AI_SEMANTIC_MATCHING,
+)
 from template_sense.mapping.fuzzy_field_matching import match_fields
 
 
@@ -110,10 +119,20 @@ def main():
     print(f"⏳ Matching {len(header_translated_labels)} header fields...")
     start_time = time.perf_counter()
 
+    # Initialize AI provider for semantic matching (if enabled)
+    ai_provider = None
+    if ENABLE_AI_SEMANTIC_MATCHING:
+        from template_sense.ai_providers.factory import get_ai_provider
+
+        ai_provider = get_ai_provider()
+        print("  • AI semantic matching enabled ✓")
+
     header_match_results = match_fields(
         translated_labels=header_translated_labels,
         field_dictionary=field_dictionary,
         threshold=DEFAULT_AUTO_MAPPING_THRESHOLD,
+        ai_provider=ai_provider,
+        enable_semantic_matching=ENABLE_AI_SEMANTIC_MATCHING,
     )
 
     header_time = time.perf_counter() - start_time
@@ -181,6 +200,8 @@ def main():
         translated_labels=column_translated_labels,
         field_dictionary=field_dictionary,
         threshold=DEFAULT_AUTO_MAPPING_THRESHOLD,
+        ai_provider=ai_provider,
+        enable_semantic_matching=ENABLE_AI_SEMANTIC_MATCHING,
     )
 
     column_time = time.perf_counter() - start_time

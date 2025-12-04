@@ -1,7 +1,0 @@
-{
-  "test_file": "tests/fixtures/invoice_templates/CO.xlsx",
-  "ai_provider": "openai",
-  "ai_model": "gpt-4o",
-  "field_dictionary_path": "e2e_stages/output/stage_0_field_dictionary.json",
-  "total_fields": 40
-}

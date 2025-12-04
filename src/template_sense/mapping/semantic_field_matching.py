@@ -196,12 +196,53 @@ def semantic_match_field(
             best_fuzzy_score=best_fuzzy_score,
         )
 
-        # Call AI provider (use classify_fields method with custom prompt)
-        # Note: We're using the generic AI interface, so we construct a simple payload
-        response_text = ai_provider.classify_fields(
-            payload={"prompt": prompt, "max_tokens": 150},
-            context="semantic_field_matching",
-        )
+        # Call AI provider directly using the client
+        # We need raw text response, so we bypass classify_fields() and call the API directly
+        try:
+            # Get the underlying client and call it directly
+            if hasattr(ai_provider, "client"):
+                # OpenAI or Anthropic provider
+                if ai_provider.provider_name == "openai":
+                    response = ai_provider.client.chat.completions.create(
+                        model=ai_provider.model,
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are a field mapping expert. Return only valid JSON.",
+                            },
+                            {"role": "user", "content": prompt},
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.0,
+                        max_tokens=150,
+                    )
+                    response_text = response.choices[0].message.content
+                elif ai_provider.provider_name == "anthropic":
+                    response = ai_provider.client.messages.create(
+                        model=ai_provider.model,
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0.0,
+                        max_tokens=150,
+                    )
+                    response_text = response.content[0].text
+                else:
+                    raise ValueError(f"Unsupported AI provider: {ai_provider.provider_name}")
+            else:
+                raise ValueError("AI provider missing client attribute")
+
+        except Exception as api_error:
+            logger.error(
+                "Failed to call AI provider for semantic matching: %s",
+                str(api_error),
+            )
+            return SemanticMatchResult(
+                original_text=translated_label,
+                translated_text=translated_label,
+                canonical_key=None,
+                semantic_confidence=0.0,
+                reasoning=f"API call failed: {str(api_error)}",
+                fuzzy_fallback_score=best_fuzzy_score,
+            )
 
         # Parse AI response (expected to be JSON)
         try:
