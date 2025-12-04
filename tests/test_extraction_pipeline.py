@@ -117,7 +117,7 @@ def test_happy_path_with_mocked_ai(simple_field_dictionary, tmp_path):
         pytest.skip("Test fixture not found")
 
     # Mock the entire pipeline with minimal AI interactions
-    with patch("template_sense.pipeline.extraction_pipeline.get_ai_provider") as mock_get_provider:
+    with patch("template_sense.ai_providers.factory.get_ai_provider") as mock_get_provider:
         # Create mock provider
         mock_provider = Mock()
         mock_provider.config.provider = "openai"
@@ -128,15 +128,15 @@ def test_happy_path_with_mocked_ai(simple_field_dictionary, tmp_path):
         # Mock all AI classification functions to return empty lists
         with (
             patch(
-                "template_sense.pipeline.extraction_pipeline.classify_header_fields"
+                "template_sense.ai.header_classification.classify_header_fields"
             ) as mock_classify_headers,
             patch(
-                "template_sense.pipeline.extraction_pipeline.classify_table_columns"
+                "template_sense.ai.table_column_classification.classify_table_columns"
             ) as mock_classify_columns,
             patch(
-                "template_sense.pipeline.extraction_pipeline.extract_line_items"
+                "template_sense.ai.line_item_extraction.extract_line_items"
             ) as mock_extract_items,
-            patch("template_sense.pipeline.extraction_pipeline.translate_labels") as mock_translate,
+            patch("template_sense.ai.translation.translate_labels") as mock_translate,
         ):
             # Set return values
             mock_classify_headers.return_value = []
@@ -234,7 +234,7 @@ def test_ai_provider_complete_failure(simple_field_dictionary):
     if not fixture_path.exists():
         pytest.skip("Test fixture not found")
 
-    with patch("template_sense.pipeline.extraction_pipeline.get_ai_provider") as mock_get_provider:
+    with patch("template_sense.ai_providers.factory.get_ai_provider") as mock_get_provider:
         mock_provider = Mock()
         mock_provider.config.provider = "openai"
         mock_provider.config.model = "gpt-4"
@@ -243,15 +243,15 @@ def test_ai_provider_complete_failure(simple_field_dictionary):
         # Make all AI classification functions raise errors
         with (
             patch(
-                "template_sense.pipeline.extraction_pipeline.classify_header_fields"
+                "template_sense.ai.header_classification.classify_header_fields"
             ) as mock_classify_headers,
             patch(
-                "template_sense.pipeline.extraction_pipeline.classify_table_columns"
+                "template_sense.ai.table_column_classification.classify_table_columns"
             ) as mock_classify_columns,
             patch(
-                "template_sense.pipeline.extraction_pipeline.extract_line_items"
+                "template_sense.ai.line_item_extraction.extract_line_items"
             ) as mock_extract_items,
-            patch("template_sense.pipeline.extraction_pipeline.translate_labels") as mock_translate,
+            patch("template_sense.ai.translation.translate_labels") as mock_translate,
         ):
             # Raise AIProviderError for all functions
             mock_classify_headers.side_effect = AIProviderError(
@@ -298,7 +298,7 @@ def test_partial_ai_response_low_confidence(simple_field_dictionary):
     if not fixture_path.exists():
         pytest.skip("Test fixture not found")
 
-    with patch("template_sense.pipeline.extraction_pipeline.get_ai_provider") as mock_get_provider:
+    with patch("template_sense.ai_providers.factory.get_ai_provider") as mock_get_provider:
         mock_provider = Mock()
         mock_provider.config.provider = "openai"
         mock_provider.config.model = "gpt-4"
@@ -306,15 +306,15 @@ def test_partial_ai_response_low_confidence(simple_field_dictionary):
 
         with (
             patch(
-                "template_sense.pipeline.extraction_pipeline.classify_header_fields"
+                "template_sense.ai.header_classification.classify_header_fields"
             ) as mock_classify_headers,
             patch(
-                "template_sense.pipeline.extraction_pipeline.classify_table_columns"
+                "template_sense.ai.table_column_classification.classify_table_columns"
             ) as mock_classify_columns,
             patch(
-                "template_sense.pipeline.extraction_pipeline.extract_line_items"
+                "template_sense.ai.line_item_extraction.extract_line_items"
             ) as mock_extract_items,
-            patch("template_sense.pipeline.extraction_pipeline.translate_labels") as mock_translate,
+            patch("template_sense.ai.translation.translate_labels") as mock_translate,
         ):
             # Return low confidence results
             mock_classify_headers.return_value = [
@@ -372,7 +372,7 @@ def test_metadata_validation(simple_field_dictionary):
     if not fixture_path.exists():
         pytest.skip("Test fixture not found")
 
-    with patch("template_sense.pipeline.extraction_pipeline.get_ai_provider") as mock_get_provider:
+    with patch("template_sense.ai_providers.factory.get_ai_provider") as mock_get_provider:
         mock_provider = Mock()
         mock_provider.config.provider = "anthropic"
         mock_provider.config.model = "claude-3-sonnet"
@@ -380,19 +380,19 @@ def test_metadata_validation(simple_field_dictionary):
 
         with (
             patch(
-                "template_sense.pipeline.extraction_pipeline.classify_header_fields",
+                "template_sense.ai.header_classification.classify_header_fields",
                 return_value=[],
             ),
             patch(
-                "template_sense.pipeline.extraction_pipeline.classify_table_columns",
+                "template_sense.ai.table_column_classification.classify_table_columns",
                 return_value=[],
             ),
             patch(
-                "template_sense.pipeline.extraction_pipeline.extract_line_items",
+                "template_sense.ai.line_item_extraction.extract_line_items",
                 return_value=[],
             ),
             patch(
-                "template_sense.pipeline.extraction_pipeline.translate_labels",
+                "template_sense.ai.translation.translate_labels",
                 return_value=[],
             ),
         ):
