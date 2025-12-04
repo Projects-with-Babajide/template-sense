@@ -60,10 +60,6 @@ def extract_template_structure(
                           failures, fuzzy matching issues)
         - metadata: Pipeline execution metadata including:
           - sheet_name: Name of the Excel sheet analyzed
-          - ai_provider: AI provider used (e.g., "openai", "anthropic")
-          - ai_model: Specific model used (e.g., "gpt-4", "claude-3-opus")
-          - pipeline_version: Version of extraction pipeline
-          - timing_ms: Total pipeline execution time in milliseconds
 
     Raises:
         FileValidationError: File doesn't exist, is unreadable, or has invalid format
@@ -80,15 +76,14 @@ def extract_template_structure(
         ...     "invoice_date": ["Date", "Invoice Date", "日付"],
         ... }
         >>> result = extract_template_structure("invoice.xlsx", field_dict)
-        >>> print(result["normalized_output"]["header_fields"])
+        >>> print(result["normalized_output"]["headers"]["matched"])
         [
             {
                 "canonical_key": "invoice_number",
-                "detected_label": "Invoice No",
-                "cell_value": "INV-12345",
-                "location": {"row": 2, "column": 1},
-                "confidence": 0.95,
-                "fuzzy_match_score": 100.0
+                "original_label": "請求書番号",
+                "translated_label": "Invoice Number",
+                "value": "INV-12345",
+                "location": {"row": 2, "col": 1}
             },
             ...
         ]

@@ -1,0 +1,143 @@
+{
+  "normalized_output": {
+    "version": "1.0",
+    "sheet_name": "CO",
+    "headers": {
+      "matched": [
+        {
+          "canonical_key": "shipper",
+          "original_label": "FROM",
+          "translated_label": "From",
+          "value": "NARITA JAPAN",
+          "location": {
+            "row": 13,
+            "col": 2
+          }
+        },
+        {
+          "canonical_key": "invoice_number",
+          "original_label": "Invoice Number",
+          "translated_label": "Invoice Number",
+          "value": "INV-12345",
+          "location": {
+            "row": 2,
+            "col": 1
+          }
+        }
+      ],
+      "unmatched": [
+        {
+          "canonical_key": null,
+          "original_label": "TRANSPORTATION",
+          "translated_label": "Transportation",
+          "value": "BY AIR",
+          "location": {
+            "row": 16,
+            "col": 2
+          }
+        }
+      ]
+    },
+    "tables": [
+      {
+        "table_index": 0,
+        "location": {
+          "row_start": 18,
+          "row_end": 25,
+          "col_start": 2,
+          "col_end": 6
+        },
+        "columns": [
+          {
+            "canonical_key": "item_number",
+            "original_label": "Item/NO",
+            "translated_label": "Item/Number",
+            "column_position": 0,
+            "sample_values": ["G01-05", "G05-10"],
+            "location": {
+              "row": 18,
+              "col": 2
+            }
+          },
+          {
+            "canonical_key": "number_of_boxes",
+            "original_label": "No of CTN",
+            "translated_label": "Number of CTN",
+            "column_position": 1,
+            "sample_values": [5, 5],
+            "location": {
+              "row": 18,
+              "col": 3
+            }
+          },
+          {
+            "canonical_key": null,
+            "original_label": "Items",
+            "translated_label": "Items",
+            "column_position": 2,
+            "sample_values": ["Frozen Wild Bluefin Tuna - Otoro", "Frozen Wild Bluefin Tuna - Block"],
+            "location": {
+              "row": 18,
+              "col": 4
+            }
+          },
+          {
+            "canonical_key": "quantity",
+            "original_label": "Quantity",
+            "translated_label": "Quantity",
+            "column_position": 3,
+            "sample_values": [5, 5],
+            "location": {
+              "row": 18,
+              "col": 5
+            }
+          }
+        ],
+        "line_items": [
+          {
+            "row_index": 19,
+            "line_number": 1,
+            "columns": {
+              "item_number": "G01-05",
+              "number_of_boxes": 5,
+              "quantity": 5
+            },
+            "is_subtotal": false
+          },
+          {
+            "row_index": 20,
+            "line_number": 2,
+            "columns": {
+              "item_number": "G05-10",
+              "number_of_boxes": 5,
+              "quantity": 5
+            },
+            "is_subtotal": false
+          }
+        ]
+      }
+    ],
+    "summary": {
+      "total_header_fields": 3,
+      "matched_header_fields": 2,
+      "unmatched_header_fields": 1,
+      "total_tables": 1,
+      "total_line_items": 2
+    }
+  },
+  "recovery_events": [
+    {
+      "severity": "warning",
+      "stage": "fuzzy_matching",
+      "message": "Low fuzzy match score for unmatched field",
+      "metadata": {
+        "original_label": "TRANSPORTATION",
+        "translated_label": "Transportation",
+        "best_match_score": 48.0
+      }
+    }
+  ],
+  "metadata": {
+    "sheet_name": "CO"
+  }
+}

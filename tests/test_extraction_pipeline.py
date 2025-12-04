@@ -155,16 +155,14 @@ def test_happy_path_with_mocked_ai(simple_field_dictionary, tmp_path):
             assert "recovery_events" in result
             assert "metadata" in result
 
-            # Verify metadata
+            # Verify metadata (only sheet_name after cleanup)
             metadata = result["metadata"]
             assert "sheet_name" in metadata
-            assert "ai_provider" in metadata
-            assert metadata["ai_provider"] == "openai"
-            assert "ai_model" in metadata
-            assert "pipeline_version" in metadata
-            assert "timing_ms" in metadata
-            assert isinstance(metadata["timing_ms"], int)
-            assert metadata["timing_ms"] > 0
+            # Internal metrics removed: ai_provider, ai_model, pipeline_version, timing_ms
+            assert "ai_provider" not in metadata
+            assert "ai_model" not in metadata
+            assert "pipeline_version" not in metadata
+            assert "timing_ms" not in metadata
 
             # Verify recovery events is a list
             assert isinstance(result["recovery_events"], list)
@@ -403,20 +401,18 @@ def test_metadata_validation(simple_field_dictionary):
                 field_dictionary=simple_field_dictionary,
             )
 
-            # Verify metadata structure
+            # Verify metadata structure (only sheet_name after cleanup)
             metadata = result["metadata"]
             assert "sheet_name" in metadata
-            assert "ai_provider" in metadata
-            assert "ai_model" in metadata
-            assert "pipeline_version" in metadata
-            assert "timing_ms" in metadata
+            # Internal metrics removed: ai_provider, ai_model, pipeline_version, timing_ms
+            assert "ai_provider" not in metadata
+            assert "ai_model" not in metadata
+            assert "pipeline_version" not in metadata
+            assert "timing_ms" not in metadata
 
-            # Verify values
-            assert metadata["ai_provider"] == "anthropic"
-            assert metadata["ai_model"] == "claude-3-sonnet"
-            assert metadata["pipeline_version"] == "1.0"
-            assert isinstance(metadata["timing_ms"], int)
-            assert metadata["timing_ms"] > 0
+            # Verify sheet_name has a value
+            assert isinstance(metadata["sheet_name"], str)
+            assert len(metadata["sheet_name"]) > 0
 
 
 # ============================================================
