@@ -587,3 +587,178 @@ def test_extraction_with_valid_template_fixture():
     assert max_col >= 2
 
     raw_workbook.close()
+
+
+# Tests for hidden content filtering integration
+
+
+@pytest.fixture
+def hidden_content_workbook_for_extraction(tmp_path: Path) -> tuple[Path, Workbook]:
+    """Create a workbook with hidden rows and columns for extraction testing."""
+    file_path = tmp_path / "hidden_extraction.xlsx"
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "TestSheet"
+
+    # Create 4x4 grid
+    sheet["A1"] = "H1"
+    sheet["B1"] = "H2"
+    sheet["C1"] = "H3_Hidden"
+    sheet["D1"] = "H4"
+    sheet["A2"] = "V1"
+    sheet["B2"] = "V2"
+    sheet["C2"] = "V3_Hidden"
+    sheet["D2"] = "V4"
+    sheet["A3"] = "V5_HiddenRow"
+    sheet["B3"] = "V6_HiddenRow"
+    sheet["C3"] = "V7_HiddenRow"
+    sheet["D3"] = "V8_HiddenRow"
+    sheet["A4"] = "V9"
+    sheet["B4"] = "V10"
+    sheet["C4"] = "V11_Hidden"
+    sheet["D4"] = "V12"
+
+    # Hide row 3
+    sheet.row_dimensions[3].hidden = True
+
+    # Hide column C
+    sheet.column_dimensions["C"].hidden = True
+
+    workbook.save(file_path)
+    raw_workbook = load_excel_file(file_path)
+
+    yield file_path, raw_workbook
+
+    raw_workbook.close()
+
+
+def test_extract_raw_grid_excludes_hidden_rows(hidden_content_workbook_for_extraction):
+    """extract_raw_grid() should exclude hidden rows from the grid."""
+    _, raw_workbook = hidden_content_workbook_for_extraction
+    wb = ExcelWorkbook(raw_workbook)
+
+    grid = extract_raw_grid(wb, "TestSheet")
+
+    # Should have 3 rows (rows 1, 2, 4), not 4 (row 3 is hidden)
+    assert len(grid) == 3
+    assert grid[0][0] == "H1"  # Row 1
+    assert grid[1][0] == "V1"  # Row 2
+    assert grid[2][0] == "V9"  # Row 4 (row 3 was hidden)
+
+
+def test_extract_raw_grid_excludes_hidden_columns(hidden_content_workbook_for_extraction):
+    """extract_raw_grid() should exclude hidden columns from each row."""
+    _, raw_workbook = hidden_content_workbook_for_extraction
+    wb = ExcelWorkbook(raw_workbook)
+
+    grid = extract_raw_grid(wb, "TestSheet")
+
+    # Each row should have 3 values (columns A, B, D), not 4 (column C is hidden)
+    assert all(len(row) == 3 for row in grid)
+    assert grid[0] == ["H1", "H2", "H4"]  # Row 1, column C excluded
+    assert grid[1] == ["V1", "V2", "V4"]  # Row 2, column C excluded
+    assert grid[2] == ["V9", "V10", "V12"]  # Row 4, column C excluded
+
+
+def test_extract_raw_grid_with_both_hidden_rows_and_columns(
+    hidden_content_workbook_for_extraction,
+):
+    """extract_raw_grid() should handle both hidden rows and columns simultaneously."""
+    _, raw_workbook = hidden_content_workbook_for_extraction
+    wb = ExcelWorkbook(raw_workbook)
+
+    grid = extract_raw_grid(wb, "TestSheet")
+
+    # Should have 3 rows, each with 3 columns
+    assert len(grid) == 3
+    for row in grid:
+        assert len(row) == 3
+
+    # Verify row 3 data is not in grid
+    for row in grid:
+        assert "V5_HiddenRow" not in row
+        assert "V6_HiddenRow" not in row
+        assert "V8_HiddenRow" not in row
+
+    # Verify column C data is not in grid
+    for row in grid:
+        assert "H3_Hidden" not in row
+        assert "V3_Hidden" not in row
+        assert "V11_Hidden" not in row
+
+
+def test_extract_raw_grid_with_no_hidden_content(simple_grid_workbook):
+    """extract_raw_grid() should work normally when no content is hidden."""
+    _, raw_workbook = simple_grid_workbook
+    wb = ExcelWorkbook(raw_workbook)
+
+    grid = extract_raw_grid(wb, "SimpleGrid")
+
+    # Should have all 3 rows and 3 columns
+    assert len(grid) == 3
+    assert all(len(row) == 3 for row in grid)
+
+
+def test_get_used_range_with_hidden_content(hidden_content_workbook_for_extraction):
+    """get_used_range() should calculate range based on visible content only."""
+    _, raw_workbook = hidden_content_workbook_for_extraction
+    wb = ExcelWorkbook(raw_workbook)
+
+    min_row, max_row, min_col, max_col = get_used_range(wb, "TestSheet")
+
+    # Hidden content is excluded by extract_raw_grid, so used range reflects visible content
+    # Visible rows: 1, 2, 4 (but indices are renumbered in grid: 1, 2, 3)
+    # Visible columns: A, B, D (but indices are renumbered in grid: 1, 2, 3)
+    assert min_row == 1
+    assert max_row == 3  # 3 visible rows
+    assert min_col == 1
+    assert max_col == 3  # 3 visible columns
+
+
+def test_extract_raw_grid_with_complex_hidden_content():
+    """Test with complex fixture having multiple hidden sheets, rows, and columns (BAT-49).
+
+    This test uses hidden_content_test.xlsx which replicates the structure of real
+    invoice templates but with sanitized dummy data. It has:
+    - 3 sheets total: 1 visible ("CO"), 2 hidden ("Invoice (CO)", "Price List")
+    - Hidden row 39 in visible sheet
+    - Hidden columns L, M in hidden sheet
+    """
+    file_path = Path("tests/fixtures/hidden_content_test.xlsx")
+    if not file_path.exists():
+        pytest.skip("hidden_content_test.xlsx fixture not found")
+
+    raw_workbook = load_excel_file(file_path)
+    wb = ExcelWorkbook(raw_workbook)
+
+    # Test 1: Verify only visible sheets are returned
+    sheet_names = wb.get_sheet_names()
+    assert "CO" in sheet_names
+    assert "Invoice (CO)" not in sheet_names  # Hidden sheet
+    assert "Price List" not in sheet_names  # Hidden sheet
+
+    # Test 2: Verify hidden row 39 is detected
+    hidden_rows = wb.get_hidden_rows("CO")
+    assert 39 in hidden_rows
+
+    # Test 3: Extract grid and verify hidden row is excluded
+    grid = extract_raw_grid(wb, "CO")
+
+    # Original sheet has 45 rows, with row 39 hidden
+    # After filtering, should have 44 rows (45 - 1 header excluded from some counts, but we include it)
+    # Grid should have 44 visible rows (1-38, 40-45)
+    assert isinstance(grid, list)
+    assert len(grid) == 44  # 45 total rows - 1 hidden row (39)
+
+    # Row 39 had specific data pattern - verify it's not in extracted grid
+    # We look for the row that would be row 39 (with value "INV-1039")
+    row_39_data = [cell for row in grid for cell in row if cell == "INV-1039"]
+    assert len(row_39_data) == 0, "Hidden row 39 data should not appear in extracted grid"
+
+    # Test 4: Verify hidden columns in hidden sheet
+    hidden_cols = wb.get_hidden_columns("Invoice (CO)")
+    assert "L" in hidden_cols
+    assert "M" in hidden_cols
+
+    raw_workbook.close()

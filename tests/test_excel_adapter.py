@@ -452,3 +452,140 @@ def test_multiple_operations_on_same_workbook(multi_sheet_workbook):
     assert col_count == 2
 
     wb.close()
+
+
+# Tests for hidden content filtering
+
+
+@pytest.fixture
+def hidden_content_workbook(tmp_path: Path) -> tuple[Path, Workbook]:
+    """Create a workbook with hidden sheets, rows, and columns."""
+    file_path = tmp_path / "hidden_content.xlsx"
+
+    workbook = Workbook()
+
+    # First sheet (visible) with hidden row and column
+    sheet1 = workbook.active
+    sheet1.title = "VisibleSheet"
+    sheet1["A1"] = "H1"
+    sheet1["B1"] = "H2"
+    sheet1["C1"] = "H3_Hidden"
+    sheet1["D1"] = "H4"
+    sheet1["A2"] = "V1"
+    sheet1["B2"] = "V2"
+    sheet1["C2"] = "V3_Hidden"
+    sheet1["D2"] = "V4"
+    sheet1["A3"] = "V5_HiddenRow"
+    sheet1["B3"] = "V6_HiddenRow"
+    sheet1["C3"] = "V7_HiddenRow"
+    sheet1["D3"] = "V8_HiddenRow"
+    sheet1["A4"] = "V9"
+    sheet1["B4"] = "V10"
+    sheet1["C4"] = "V11_Hidden"
+    sheet1["D4"] = "V12"
+
+    # Hide row 3 (1-based)
+    sheet1.row_dimensions[3].hidden = True
+
+    # Hide column C
+    sheet1.column_dimensions["C"].hidden = True
+
+    # Second sheet (hidden)
+    sheet2 = workbook.create_sheet("HiddenSheet")
+    sheet2["A1"] = "Should not be visible"
+    sheet2.sheet_state = "hidden"
+
+    workbook.save(file_path)
+    raw_workbook = load_excel_file(file_path)
+
+    yield file_path, raw_workbook
+
+    raw_workbook.close()
+
+
+class TestHiddenContentFiltering:
+    """Test that hidden sheets, rows, and columns are properly filtered."""
+
+    def test_hidden_sheets_excluded(self, hidden_content_workbook):
+        """Hidden sheets should not appear in get_sheet_names()."""
+        _, raw_workbook = hidden_content_workbook
+        wb = ExcelWorkbook(raw_workbook)
+
+        sheet_names = wb.get_sheet_names()
+
+        # Should only include visible sheets
+        assert len(sheet_names) == 1
+        assert "VisibleSheet" in sheet_names
+        assert "HiddenSheet" not in sheet_names
+
+    def test_get_hidden_rows_returns_correct_set(self, hidden_content_workbook):
+        """get_hidden_rows() should return set of hidden row numbers."""
+        _, raw_workbook = hidden_content_workbook
+        wb = ExcelWorkbook(raw_workbook)
+
+        hidden_rows = wb.get_hidden_rows("VisibleSheet")
+
+        assert isinstance(hidden_rows, set)
+        assert 3 in hidden_rows
+        assert 1 not in hidden_rows
+        assert 2 not in hidden_rows
+        assert 4 not in hidden_rows
+
+    def test_get_hidden_columns_returns_correct_set(self, hidden_content_workbook):
+        """get_hidden_columns() should return set of hidden column letters."""
+        _, raw_workbook = hidden_content_workbook
+        wb = ExcelWorkbook(raw_workbook)
+
+        hidden_cols = wb.get_hidden_columns("VisibleSheet")
+
+        assert isinstance(hidden_cols, set)
+        assert "C" in hidden_cols
+        assert "A" not in hidden_cols
+        assert "B" not in hidden_cols
+        assert "D" not in hidden_cols
+
+    def test_is_row_hidden_detects_correctly(self, hidden_content_workbook):
+        """is_row_hidden() should correctly identify hidden rows."""
+        _, raw_workbook = hidden_content_workbook
+        wb = ExcelWorkbook(raw_workbook)
+
+        # Row 3 is hidden
+        assert wb.is_row_hidden("VisibleSheet", 3) is True
+
+        # Other rows are visible
+        assert wb.is_row_hidden("VisibleSheet", 1) is False
+        assert wb.is_row_hidden("VisibleSheet", 2) is False
+        assert wb.is_row_hidden("VisibleSheet", 4) is False
+
+    def test_is_column_hidden_detects_correctly(self, hidden_content_workbook):
+        """is_column_hidden() should correctly identify hidden columns."""
+        _, raw_workbook = hidden_content_workbook
+        wb = ExcelWorkbook(raw_workbook)
+
+        # Column C is hidden
+        assert wb.is_column_hidden("VisibleSheet", "C") is True
+
+        # Other columns are visible
+        assert wb.is_column_hidden("VisibleSheet", "A") is False
+        assert wb.is_column_hidden("VisibleSheet", "B") is False
+        assert wb.is_column_hidden("VisibleSheet", "D") is False
+
+    def test_hidden_rows_utility_with_no_hidden_rows(self, multi_sheet_workbook):
+        """get_hidden_rows() should return empty set when no rows are hidden."""
+        _, raw_workbook = multi_sheet_workbook
+        wb = ExcelWorkbook(raw_workbook)
+
+        hidden_rows = wb.get_hidden_rows("Sheet1")
+
+        assert isinstance(hidden_rows, set)
+        assert len(hidden_rows) == 0
+
+    def test_hidden_columns_utility_with_no_hidden_columns(self, multi_sheet_workbook):
+        """get_hidden_columns() should return empty set when no columns are hidden."""
+        _, raw_workbook = multi_sheet_workbook
+        wb = ExcelWorkbook(raw_workbook)
+
+        hidden_cols = wb.get_hidden_columns("Sheet1")
+
+        assert isinstance(hidden_cols, set)
+        assert len(hidden_cols) == 0
