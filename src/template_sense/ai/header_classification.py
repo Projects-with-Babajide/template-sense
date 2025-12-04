@@ -35,6 +35,9 @@ class ClassifiedHeaderField:
         block_index: Index of the HeaderCandidateBlock this field came from.
         row_index: Row coordinate in the original grid (1-based Excel convention).
         col_index: Column coordinate in the original grid (1-based Excel convention).
+        label_col_offset: Offset from main cell to label cell (0 = same cell, positive = cells to right).
+        value_col_offset: Offset from main cell to value cell (0 = same cell, positive = cells to right).
+        pattern_type: Type of label-value pattern detected ("multi_cell", "same_cell", or None).
         model_confidence: AI confidence score (0.0-1.0), if provided by the model.
                          None if the provider doesn't return confidence scores.
         metadata: Optional provider-specific or additional classification metadata.
@@ -46,6 +49,9 @@ class ClassifiedHeaderField:
     block_index: int
     row_index: int
     col_index: int
+    label_col_offset: int = 0
+    value_col_offset: int = 0
+    pattern_type: str | None = None
     model_confidence: float | None = None
     metadata: dict[str, Any] | None = None
 
@@ -299,6 +305,27 @@ def _parse_header_field(
         )
         metadata = None
 
+    # Extract label/value pattern fields (optional, new in BAT-53)
+    label_col_offset = header_dict.get("label_col_offset", 0)
+    value_col_offset = header_dict.get("value_col_offset", 0)
+    pattern_type = header_dict.get("pattern_type")
+
+    # Validate pattern fields
+    try:
+        label_col_offset = int(label_col_offset)
+        value_col_offset = int(value_col_offset)
+    except (TypeError, ValueError):
+        logger.warning("Invalid label/value_col_offset values. Using defaults (0, 0).")
+        label_col_offset = 0
+        value_col_offset = 0
+
+    if pattern_type is not None and pattern_type not in ["multi_cell", "same_cell"]:
+        logger.warning(
+            "Invalid pattern_type value: %s. Must be 'multi_cell', 'same_cell', or None. Setting to None.",
+            pattern_type,
+        )
+        pattern_type = None
+
     # canonical_key is not populated by AI (will be set by mapping layer)
     canonical_key = None
 
@@ -309,6 +336,9 @@ def _parse_header_field(
         block_index=block_index,
         row_index=row_index,
         col_index=col_index,
+        label_col_offset=label_col_offset,
+        value_col_offset=value_col_offset,
+        pattern_type=pattern_type,
         model_confidence=model_confidence,
         metadata=metadata,
     )
