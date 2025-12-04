@@ -1,0 +1,222 @@
+[
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "UTAMARU TRADING LLC",
+    "block_index": 0,
+    "row_index": 1,
+    "col_index": 2,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "2-19-11-603, Azabujuban, Minato-ku, Tokyo, 106-0045 Japan",
+    "block_index": 0,
+    "row_index": 2,
+    "col_index": 2,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "COPY",
+    "block_index": 0,
+    "row_index": 5,
+    "col_index": 6,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "GREEN CONTINENT TRADING",
+    "block_index": 0,
+    "row_index": 6,
+    "col_index": 2,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "Abu Hail Building 13, plot, 16940,",
+    "block_index": 0,
+    "row_index": 7,
+    "col_index": 2,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "GCT20240509",
+    "block_index": 0,
+    "row_index": 7,
+    "col_index": 6,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "G-04 Office, Abu Hail. Dubai, UAE",
+    "block_index": 0,
+    "row_index": 8,
+    "col_index": 2,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "2024-05-08T00:00:00",
+    "block_index": 0,
+    "row_index": 8,
+    "col_index": 6,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "JAPAN",
+    "block_index": 0,
+    "row_index": 11,
+    "col_index": 6,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": "FROM",
+    "raw_value": null,
+    "block_index": 0,
+    "row_index": 13,
+    "col_index": 2,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "NARITA JAPAN",
+    "block_index": 0,
+    "row_index": 13,
+    "col_index": 4,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": "TO",
+    "raw_value": null,
+    "block_index": 0,
+    "row_index": 14,
+    "col_index": 2,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "DUBAI UEA",
+    "block_index": 0,
+    "row_index": 14,
+    "col_index": 4,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": "SHIPMENT DAY",
+    "raw_value": null,
+    "block_index": 0,
+    "row_index": 15,
+    "col_index": 2,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "2024-05-09T00:00:00",
+    "block_index": 0,
+    "row_index": 15,
+    "col_index": 4,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": "TRANSPORTATION",
+    "raw_value": null,
+    "block_index": 0,
+    "row_index": 16,
+    "col_index": 2,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "BY AIR",
+    "block_index": 0,
+    "row_index": 16,
+    "col_index": 4,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "NO MARK",
+    "block_index": 0,
+    "row_index": 37,
+    "col_index": 2,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "",
+    "block_index": 0,
+    "row_index": 39,
+    "col_index": 1,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "2024-05-08T00:00:00",
+    "block_index": 0,
+    "row_index": 40,
+    "col_index": 4,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "UTAMARU TRADING LLC",
+    "block_index": 0,
+    "row_index": 41,
+    "col_index": 4,
+    "model_confidence": 1.0,
+    "metadata": null
+  },
+  {
+    "canonical_key": null,
+    "raw_label": null,
+    "raw_value": "UTAMARU RYUICHI",
+    "block_index": 0,
+    "row_index": 44,
+    "col_index": 4,
+    "model_confidence": 1.0,
+    "metadata": null
+  }
+]

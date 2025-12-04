@@ -516,6 +516,7 @@ def run_extraction_pipeline(
                 translated_labels=header_translated_labels,
                 field_dictionary=field_dictionary,
                 threshold=DEFAULT_AUTO_MAPPING_THRESHOLD,
+                ai_provider=ai_provider,  # Pass AI provider for semantic matching
             )
             logger.info(
                 "Matched %d header fields (threshold=%.1f)",
@@ -554,6 +555,7 @@ def run_extraction_pipeline(
                 translated_labels=column_translated_labels,
                 field_dictionary=field_dictionary,
                 threshold=DEFAULT_AUTO_MAPPING_THRESHOLD,
+                ai_provider=ai_provider,  # Pass AI provider for semantic matching
             )
             logger.info(
                 "Matched %d column fields (threshold=%.1f)",

@@ -1,0 +1,5 @@
+{
+  "provider": "openai",
+  "model": "gpt-4o",
+  "timeout_seconds": 30
+}

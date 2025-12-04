@@ -1,0 +1,6 @@
+{
+  "header_classification_seconds": 7.588909249985591,
+  "column_classification_seconds": 2.1237681249622256,
+  "line_item_extraction_seconds": 1.8457874160376377,
+  "total_seconds": 11.558464790985454
+}
