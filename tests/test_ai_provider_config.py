@@ -110,6 +110,7 @@ class TestLoadAIConfig:
         monkeypatch.setenv(AI_PROVIDER_ENV_VAR, "openai")
         monkeypatch.setenv(OPENAI_API_KEY_ENV_VAR, "sk-test-key")
         # AI_MODEL_ENV_VAR not set
+        monkeypatch.delenv(AI_MODEL_ENV_VAR, raising=False)
 
         config = load_ai_config()
 
