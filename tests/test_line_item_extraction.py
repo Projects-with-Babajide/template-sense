@@ -123,7 +123,7 @@ class TestExtractLineItemsSuccess:
         assert result[1].columns["product_name"] == "Widget B"
 
         # Verify provider was called with correct payload
-        mock_provider.classify_fields.assert_called_once_with(sample_payload)
+        mock_provider.classify_fields.assert_called_once_with(sample_payload, context="line_items")
 
     def test_optional_fields_present(self, mock_provider, sample_payload):
         """Test extraction with all optional fields present."""
