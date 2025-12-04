@@ -95,9 +95,9 @@ def main():
         else:
             field.update(
                 {
-                    "translated_label": match_result["translated_text"]
-                    if match_result
-                    else header.get("raw_label"),
+                    "translated_label": (
+                        match_result["translated_text"] if match_result else header.get("raw_label")
+                    ),
                     "best_match_score": match_result["match_score"] if match_result else 0.0,
                 }
             )
@@ -144,9 +144,9 @@ def main():
         else:
             col_data.update(
                 {
-                    "translated_label": match_result["translated_text"]
-                    if match_result
-                    else column.get("raw_label"),
+                    "translated_label": (
+                        match_result["translated_text"] if match_result else column.get("raw_label")
+                    ),
                     "best_match_score": match_result["match_score"] if match_result else 0.0,
                 }
             )

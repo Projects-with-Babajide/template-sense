@@ -255,26 +255,28 @@ def main():
             "total": len(header_match_results),
             "matched": matched_headers,
             "unmatched": unmatched_headers,
-            "match_rate": matched_headers / len(header_match_results)
-            if header_match_results
-            else 0,
-            "avg_score": sum(r.match_score for r in header_match_results)
-            / len(header_match_results)
-            if header_match_results
-            else 0,
+            "match_rate": (
+                matched_headers / len(header_match_results) if header_match_results else 0
+            ),
+            "avg_score": (
+                sum(r.match_score for r in header_match_results) / len(header_match_results)
+                if header_match_results
+                else 0
+            ),
             "matching_time_seconds": header_time,
         },
         "columns": {
             "total": len(column_match_results),
             "matched": matched_columns,
             "unmatched": unmatched_columns,
-            "match_rate": matched_columns / len(column_match_results)
-            if column_match_results
-            else 0,
-            "avg_score": sum(r.match_score for r in column_match_results)
-            / len(column_match_results)
-            if column_match_results
-            else 0,
+            "match_rate": (
+                matched_columns / len(column_match_results) if column_match_results else 0
+            ),
+            "avg_score": (
+                sum(r.match_score for r in column_match_results) / len(column_match_results)
+                if column_match_results
+                else 0
+            ),
             "matching_time_seconds": column_time,
         },
     }
