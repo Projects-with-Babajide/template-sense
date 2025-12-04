@@ -201,9 +201,21 @@ class AnthropicProvider(AIProvider):
             return (
                 "You are a field classification assistant for invoice templates. "
                 "Analyze the provided header fields and classify each field "
-                "semantically based on common invoice terminology. Return your "
-                "response as valid JSON only, with no additional text or explanation. "
-                "Use a 'headers' key containing an array of classified fields."
+                "semantically based on common invoice terminology.\n\n"
+                "PATTERN DETECTION:\n"
+                "1. Multi-cell patterns: Label in one cell, value in adjacent cell\n"
+                "   - Check adjacent_cells to find related values\n"
+                "   - Common patterns: label on left, value on right (or above/below)\n"
+                '   - Example: "Invoice:" in col 1, "12345" in col 3 (right_2)\n'
+                "2. Same-cell patterns: Label and value in same cell with delimiter\n"
+                '   - Common delimiters: ":", "-", "=", "|"\n'
+                '   - Example: "Invoice Number: INV-12345"\n\n'
+                "When you detect these patterns, populate both raw_label and raw_value fields. "
+                "Set label_col_offset and value_col_offset to indicate where label/value are "
+                "relative to the main cell (0 = same cell, positive = cells to the right).\n\n"
+                "Return your response as valid JSON only, with no additional text or explanation. "
+                "Use a 'headers' key containing an array of classified fields. Include optional "
+                "fields (label_col_offset, value_col_offset, pattern_type) when patterns are detected."
             )
         if context == "columns":
             return (

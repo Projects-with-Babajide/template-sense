@@ -35,6 +35,7 @@ DEFAULT_AI_TIMEOUT_SECONDS = 30  # Timeout per AI request
 
 # AI payload configuration
 DEFAULT_AI_SAMPLE_ROWS = 5  # Number of sample data rows to include in AI payload
+DEFAULT_ADJACENT_CELL_RADIUS = 3  # Number of adjacent cells in each direction for header context
 
 # Grid validation
 MIN_GRID_ROWS = 1
@@ -114,6 +115,7 @@ __all__ = [
     "DEFAULT_TABLE_HEADER_MIN_SCORE",
     "DEFAULT_AI_TIMEOUT_SECONDS",
     "DEFAULT_AI_SAMPLE_ROWS",
+    "DEFAULT_ADJACENT_CELL_RADIUS",
     "MIN_GRID_ROWS",
     "MIN_GRID_COLUMNS",
     "AI_PROVIDER_ENV_VAR",

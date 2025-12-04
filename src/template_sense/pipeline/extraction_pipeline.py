@@ -329,6 +329,14 @@ def run_extraction_pipeline(
             len(sheet_summary.get("header_blocks", [])),
             len(sheet_summary.get("table_blocks", [])),
         )
+
+        # Extract grid for adjacent cell context (BAT-53)
+        # Note: summary_builder already extracts the grid internally, but we need
+        # it here for build_ai_payload. Could optimize later to avoid double extraction.
+        from template_sense.extraction.sheet_extractor import extract_raw_grid
+
+        grid = extract_raw_grid(workbook, sheet_name)
+        logger.debug("Extracted grid for adjacent cell context (%d rows)", len(grid))
     except ExtractionError:
         logger.error("Grid extraction failed")
         workbook.close()
@@ -355,7 +363,11 @@ def run_extraction_pipeline(
     # ============================================================
     logger.info("Stage 5: Building AI payload")
     try:
-        ai_payload = build_ai_payload(sheet_summary, field_dictionary)
+        ai_payload = build_ai_payload(
+            sheet_summary=sheet_summary,
+            field_dictionary=field_dictionary,
+            grid=grid,  # Pass grid for adjacent cell context (BAT-53)
+        )
         logger.info("AI payload built successfully")
     except Exception as e:
         logger.error("Failed to build AI payload: %s", str(e))
