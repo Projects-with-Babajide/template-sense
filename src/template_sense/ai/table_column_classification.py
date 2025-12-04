@@ -10,8 +10,12 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
+from template_sense.ai.base_classification import (
+    AIClassificationOrchestrator,
+    validate_confidence,
+    validate_metadata,
+)
 from template_sense.ai_providers.interface import AIProvider
-from template_sense.errors import AIProviderError
 
 # Set up module logger
 logger = logging.getLogger(__name__)
@@ -95,129 +99,16 @@ def classify_table_columns(
         >>> for column in classified:
         ...     print(f"{column.raw_label}: {column.sample_values}")
     """
-    provider_name = ai_provider.provider_name
-    model_name = ai_provider.model
-
-    # Calculate payload size for logging (approximate)
-    payload_size = len(str(payload))
-    table_count = len(payload.get("table_candidates", []))
-
-    logger.debug(
-        "Calling AI provider for table column classification: provider=%s, model=%s, "
-        "payload_size=%d bytes, table_candidates=%d",
-        provider_name,
-        model_name,
-        payload_size,
-        table_count,
+    # Delegate to generic orchestrator
+    orchestrator = AIClassificationOrchestrator(
+        context="columns",
+        response_key="columns",
+        parser_func=_parse_table_column,
+        item_name="table column",
+        logger=logger,
     )
 
-    # Call the AI provider with context="columns"
-    try:
-        response = ai_provider.classify_fields(payload, context="columns")
-    except Exception as e:
-        # AIProvider implementations should wrap errors in AIProviderError,
-        # but catch any unexpected errors here as well
-        error_msg = f"AI provider request failed: {str(e)}"
-        logger.error(
-            "Table column classification failed for provider=%s, model=%s: %s",
-            provider_name,
-            model_name,
-            error_msg,
-        )
-        if isinstance(e, AIProviderError):
-            raise
-        raise AIProviderError(
-            provider_name=provider_name,
-            error_details=str(e),
-            request_type="classify_fields",
-        ) from e
-
-    # Validate response structure
-    if not isinstance(response, dict):
-        error_msg = f"Expected dict response, got {type(response).__name__}"
-        logger.error(
-            "Invalid response structure from provider=%s: %s",
-            provider_name,
-            error_msg,
-        )
-        raise AIProviderError(
-            provider_name=provider_name,
-            error_details=error_msg,
-            request_type="classify_fields",
-        )
-
-    if "columns" not in response:
-        error_msg = "Response missing required 'columns' key"
-        logger.error(
-            "Invalid response structure from provider=%s: %s",
-            provider_name,
-            error_msg,
-        )
-        raise AIProviderError(
-            provider_name=provider_name,
-            error_details=error_msg,
-            request_type="classify_fields",
-        )
-
-    columns_data = response["columns"]
-    if not isinstance(columns_data, list):
-        error_msg = f"'columns' must be a list, got {type(columns_data).__name__}"
-        logger.error(
-            "Invalid response structure from provider=%s: %s",
-            provider_name,
-            error_msg,
-        )
-        raise AIProviderError(
-            provider_name=provider_name,
-            error_details=error_msg,
-            request_type="classify_fields",
-        )
-
-    # Parse individual table columns
-    # Prefer partial success: skip invalid columns but continue processing
-    classified_columns: list[ClassifiedTableColumn] = []
-    parse_errors = 0
-
-    for idx, column_dict in enumerate(columns_data):
-        try:
-            column = _parse_table_column(column_dict, idx)
-            classified_columns.append(column)
-        except (KeyError, TypeError, ValueError) as e:
-            # Log the error but continue processing other columns
-            parse_errors += 1
-            logger.warning(
-                "Failed to parse table column at index %d from provider=%s: %s. "
-                "Skipping this column.",
-                idx,
-                provider_name,
-                str(e),
-            )
-            continue
-
-    # Log summary statistics
-    total_columns = len(columns_data)
-    success_count = len(classified_columns)
-    logger.info(
-        "Table column classification completed: provider=%s, model=%s, "
-        "total_columns=%d, successfully_parsed=%d, parse_errors=%d",
-        provider_name,
-        model_name,
-        total_columns,
-        success_count,
-        parse_errors,
-    )
-
-    # Calculate average confidence if available
-    confidences = [c.model_confidence for c in classified_columns if c.model_confidence is not None]
-    if confidences:
-        avg_confidence = sum(confidences) / len(confidences)
-        logger.debug(
-            "Average model confidence: %.2f (based on %d columns)",
-            avg_confidence,
-            len(confidences),
-        )
-
-    return classified_columns
+    return orchestrator.classify(ai_provider, payload)
 
 
 def _parse_table_column(
@@ -280,33 +171,13 @@ def _parse_table_column(
         raise TypeError(f"'sample_values' must be a list, got {type(sample_values).__name__}")
     # sample_values can be an empty list, which is valid
 
-    # Extract optional fields
-    model_confidence = column_dict.get("model_confidence")
-    if model_confidence is not None:
-        try:
-            model_confidence = float(model_confidence)
-            # Validate confidence range
-            if not 0.0 <= model_confidence <= 1.0:
-                logger.warning(
-                    "model_confidence out of range [0.0, 1.0]: %.2f. Setting to None.",
-                    model_confidence,
-                )
-                model_confidence = None
-        except (TypeError, ValueError):
-            logger.warning(
-                "Invalid model_confidence value: %s. Setting to None.",
-                model_confidence,
-            )
-            model_confidence = None
-
-    # Extract metadata (optional)
-    metadata = column_dict.get("metadata")
-    if metadata is not None and not isinstance(metadata, dict):
-        logger.warning(
-            "metadata must be a dict, got %s. Setting to None.",
-            type(metadata).__name__,
-        )
-        metadata = None
+    # Extract optional fields using validation helpers
+    model_confidence = validate_confidence(
+        column_dict.get("model_confidence"),
+        column_index,
+        logger,
+    )
+    metadata = validate_metadata(column_dict.get("metadata"), logger)
 
     # canonical_key is not populated by AI (will be set by mapping layer)
     canonical_key = None
