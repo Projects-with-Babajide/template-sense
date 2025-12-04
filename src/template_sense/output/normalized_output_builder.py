@@ -15,7 +15,8 @@ This module does NOT:
 This module DOES:
 - Convert internal dataclasses to JSON-serializable dicts
 - Partition headers into matched/unmatched groups
-- Preserve all metadata, coordinates, and confidence scores
+- Filter out internal metrics (confidence scores, matching variants, detection info)
+- Preserve essential fields for Tako processing and template export
 - Produce deterministic, versioned output
 - Ensure complete JSON serialization compatibility
 
@@ -73,23 +74,19 @@ def _serialize_header_field(field: CanonicalHeaderField) -> dict[str, Any]:
         >>> result["canonical_key"]
         'invoice_number'
     """
-    # Build confidence dict (only include scores that exist)
-    confidence: dict[str, float] = {}
-    if field.ai_confidence is not None:
-        confidence["ai"] = field.ai_confidence
-    if field.fuzzy_match_score is not None:
-        confidence["fuzzy_match"] = field.fuzzy_match_score
-
-    return {
+    result = {
         "canonical_key": field.canonical_key,
         "original_label": field.original_label,
         "translated_label": field.translated_label,
         "value": field.value,
         "location": {"row": field.row_index, "col": field.col_index},
-        "confidence": confidence,
-        "matched_variant": field.matched_variant,
-        "metadata": field.metadata,
     }
+
+    # Only include metadata if non-empty
+    if field.metadata:
+        result["metadata"] = field.metadata
+
+    return result
 
 
 def _serialize_table_column(column: CanonicalTableColumn) -> dict[str, Any]:
@@ -120,24 +117,20 @@ def _serialize_table_column(column: CanonicalTableColumn) -> dict[str, Any]:
         >>> result["canonical_key"]
         'product_name'
     """
-    # Build confidence dict (only include scores that exist)
-    confidence: dict[str, float] = {}
-    if column.ai_confidence is not None:
-        confidence["ai"] = column.ai_confidence
-    if column.fuzzy_match_score is not None:
-        confidence["fuzzy_match"] = column.fuzzy_match_score
-
-    return {
+    result = {
         "canonical_key": column.canonical_key,
         "original_label": column.original_label,
         "translated_label": column.translated_label,
         "column_position": column.column_position,
         "sample_values": column.sample_values,
         "location": {"row": column.row_index, "col": column.col_index},
-        "confidence": confidence,
-        "matched_variant": column.matched_variant,
-        "metadata": column.metadata,
     }
+
+    # Only include metadata if non-empty
+    if column.metadata:
+        result["metadata"] = column.metadata
+
+    return result
 
 
 def _serialize_line_item(item: CanonicalLineItem) -> dict[str, Any]:
@@ -163,19 +156,18 @@ def _serialize_line_item(item: CanonicalLineItem) -> dict[str, Any]:
         >>> result["row_index"]
         6
     """
-    # Build confidence dict (only include scores that exist)
-    confidence: dict[str, float] = {}
-    if item.ai_confidence is not None:
-        confidence["ai"] = item.ai_confidence
-
-    return {
+    result = {
         "row_index": item.row_index,
         "line_number": item.line_number,
         "columns": item.columns,
         "is_subtotal": item.is_subtotal,
-        "confidence": confidence,
-        "metadata": item.metadata,
     }
+
+    # Only include metadata if non-empty
+    if item.metadata:
+        result["metadata"] = item.metadata
+
+    return result
 
 
 def _serialize_table(table: CanonicalTable, table_index: int) -> dict[str, Any]:
@@ -212,14 +204,7 @@ def _serialize_table(table: CanonicalTable, table_index: int) -> dict[str, Any]:
     # Serialize line items
     serialized_line_items = [_serialize_line_item(item) for item in table.line_items]
 
-    # Build detection_info dict (only include values that exist)
-    detection_info: dict[str, Any] = {}
-    if table.heuristic_score is not None:
-        detection_info["heuristic_score"] = table.heuristic_score
-    if table.detected_pattern is not None:
-        detection_info["detected_pattern"] = table.detected_pattern
-
-    return {
+    result = {
         "table_index": table_index,
         "location": {
             "row_start": table.row_start,
@@ -229,9 +214,13 @@ def _serialize_table(table: CanonicalTable, table_index: int) -> dict[str, Any]:
         },
         "columns": serialized_columns,
         "line_items": serialized_line_items,
-        "detection_info": detection_info,
-        "metadata": table.metadata,
     }
+
+    # Only include metadata if non-empty
+    if table.metadata:
+        result["metadata"] = table.metadata
+
+    return result
 
 
 def _partition_headers(

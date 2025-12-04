@@ -190,10 +190,11 @@ def test_serialize_header_field_matched():
     assert result["translated_label"] == "Invoice Number"
     assert result["value"] == "INV-12345"
     assert result["location"] == {"row": 1, "col": 2}
-    assert result["confidence"]["ai"] == 0.95
-    assert result["confidence"]["fuzzy_match"] == 87.5
-    assert result["matched_variant"] == "Invoice No"
-    assert result["metadata"] == {}
+    # Internal metrics removed: confidence, matched_variant
+    assert "confidence" not in result
+    assert "matched_variant" not in result
+    # Empty metadata should be omitted
+    assert "metadata" not in result
 
 
 def test_serialize_header_field_unmatched():
@@ -210,9 +211,9 @@ def test_serialize_header_field_unmatched():
     assert result["canonical_key"] is None
     assert result["original_label"] == "請求書番号"
     assert result["translated_label"] is None
-    assert result["confidence"]["ai"] == 0.95
-    assert "fuzzy_match" not in result["confidence"]
-    assert result["matched_variant"] is None
+    # Internal metrics removed: confidence, matched_variant
+    assert "confidence" not in result
+    assert "matched_variant" not in result
 
 
 def test_serialize_header_field_no_ai_confidence():
@@ -221,8 +222,8 @@ def test_serialize_header_field_no_ai_confidence():
 
     result = _serialize_header_field(field)
 
-    assert "ai" not in result["confidence"]
-    assert result["confidence"]["fuzzy_match"] == 87.5
+    # Internal metrics removed: confidence
+    assert "confidence" not in result
 
 
 def test_serialize_header_field_null_value():
@@ -251,10 +252,11 @@ def test_serialize_table_column_matched():
     assert result["column_position"] == 0
     assert result["sample_values"] == ["Widget A", "Widget B"]
     assert result["location"] == {"row": 5, "col": 1}
-    assert result["confidence"]["ai"] == 0.9
-    assert result["confidence"]["fuzzy_match"] == 92.0
-    assert result["matched_variant"] == "Product"
-    assert result["metadata"] == {}
+    # Internal metrics removed: confidence, matched_variant
+    assert "confidence" not in result
+    assert "matched_variant" not in result
+    # Empty metadata should be omitted
+    assert "metadata" not in result
 
 
 def test_serialize_table_column_unmatched():
@@ -270,8 +272,9 @@ def test_serialize_table_column_unmatched():
 
     assert result["canonical_key"] is None
     assert result["translated_label"] is None
-    assert "fuzzy_match" not in result["confidence"]
-    assert result["matched_variant"] is None
+    # Internal metrics removed: confidence, matched_variant
+    assert "confidence" not in result
+    assert "matched_variant" not in result
 
 
 def test_serialize_table_column_empty_samples():
@@ -298,8 +301,10 @@ def test_serialize_line_item_regular():
     assert result["line_number"] == 1
     assert result["columns"] == {"product_name": "Widget A", "quantity": 5}
     assert result["is_subtotal"] is False
-    assert result["confidence"]["ai"] == 0.88
-    assert result["metadata"] == {}
+    # Internal metrics removed: confidence
+    assert "confidence" not in result
+    # Empty metadata should be omitted
+    assert "metadata" not in result
 
 
 def test_serialize_line_item_subtotal():
@@ -318,7 +323,8 @@ def test_serialize_line_item_no_confidence():
 
     result = _serialize_line_item(item)
 
-    assert result["confidence"] == {}
+    # Internal metrics removed: confidence
+    assert "confidence" not in result
 
 
 # ============================================================
@@ -347,9 +353,10 @@ def test_serialize_table_with_content():
     assert result["location"]["col_end"] == 5
     assert len(result["columns"]) == 2
     assert len(result["line_items"]) == 2
-    assert result["detection_info"]["heuristic_score"] == 0.9
-    assert result["detection_info"]["detected_pattern"] == "numeric_density"
-    assert result["metadata"] == {}
+    # Internal metrics removed: detection_info
+    assert "detection_info" not in result
+    # Empty metadata should be omitted
+    assert "metadata" not in result
 
 
 def test_serialize_table_empty():
@@ -360,7 +367,8 @@ def test_serialize_table_empty():
 
     assert result["columns"] == []
     assert result["line_items"] == []
-    assert result["detection_info"] == {}
+    # Internal metrics removed: detection_info
+    assert "detection_info" not in result
 
 
 # ============================================================
@@ -618,8 +626,9 @@ def test_build_normalized_output_null_value_handling():
     assert unmatched["original_label"] is None
     assert unmatched["translated_label"] is None
     assert unmatched["value"] is None
-    assert unmatched["matched_variant"] is None
-    assert unmatched["confidence"] == {}
+    # Internal metrics removed: matched_variant, confidence
+    assert "matched_variant" not in unmatched
+    assert "confidence" not in unmatched
 
 
 def test_build_normalized_output_coordinate_preservation():
@@ -666,7 +675,7 @@ def test_build_normalized_output_coordinate_preservation():
 
 
 def test_build_normalized_output_confidence_score_preservation():
-    """Test that both AI (0-1) and fuzzy match (0-100) scores are preserved."""
+    """Test that confidence scores are no longer included in output (internal metrics removed)."""
     header = create_header_field(ai_confidence=0.85, fuzzy_match_score=92.5)
     column = create_table_column(ai_confidence=0.75, fuzzy_match_score=88.0)
     line_item = create_line_item(ai_confidence=0.91)
@@ -684,19 +693,17 @@ def test_build_normalized_output_confidence_score_preservation():
 
     output = build_normalized_output(template)
 
-    # Check header confidence
+    # Internal metrics removed: confidence scores should not be in output
     matched_header = output["headers"]["matched"][0]
-    assert matched_header["confidence"]["ai"] == 0.85
-    assert matched_header["confidence"]["fuzzy_match"] == 92.5
+    assert "confidence" not in matched_header
 
-    # Check column confidence
+    # Check column confidence removed
     column_output = output["tables"][0]["columns"][0]
-    assert column_output["confidence"]["ai"] == 0.75
-    assert column_output["confidence"]["fuzzy_match"] == 88.0
+    assert "confidence" not in column_output
 
-    # Check line item confidence
+    # Check line item confidence removed
     item_output = output["tables"][0]["line_items"][0]
-    assert item_output["confidence"]["ai"] == 0.91
+    assert "confidence" not in item_output
 
 
 def test_build_normalized_output_metadata_preservation():

@@ -181,21 +181,25 @@ def _build_metadata(
 
     Args:
         sheet_name: Name of the sheet that was processed
-        ai_provider: AI provider instance used
-        timing_ms: Total pipeline execution time in milliseconds
+        ai_provider: AI provider instance used (kept for internal logging)
+        timing_ms: Total pipeline execution time in milliseconds (kept for internal logging)
 
     Returns:
-        Metadata dictionary with all required fields
+        Metadata dictionary with only essential fields for Tako
     """
     metadata = {
         "sheet_name": sheet_name,
-        "ai_provider": ai_provider.config.provider,
-        "ai_model": ai_provider.config.model or "default",
-        "pipeline_version": PIPELINE_VERSION,
-        "timing_ms": timing_ms,
     }
 
-    logger.debug("Built pipeline metadata: %s", metadata)
+    logger.debug(
+        "Built pipeline metadata: sheet_name=%s, ai_provider=%s, ai_model=%s, "
+        "pipeline_version=%s, timing_ms=%d (internal only)",
+        sheet_name,
+        ai_provider.config.provider,
+        ai_provider.config.model or "default",
+        PIPELINE_VERSION,
+        timing_ms,
+    )
     return metadata
 
 
