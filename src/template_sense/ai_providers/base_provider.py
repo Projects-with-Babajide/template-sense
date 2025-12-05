@@ -23,6 +23,7 @@ from typing import Any
 
 from template_sense.ai_providers.interface import AIProvider
 from template_sense.errors import AIProviderError
+from template_sense.serialization import serialize_to_json
 
 logger = logging.getLogger(__name__)
 
@@ -425,7 +426,7 @@ class BaseAIProvider(AIProvider):
 
         return (
             f"Please classify the following {description}:\n\n"
-            f"{json.dumps(payload, indent=2)}\n\n"
+            f"{serialize_to_json(payload, indent=2)}\n\n"
             "Respond with a JSON object containing your classifications."
         )
 
