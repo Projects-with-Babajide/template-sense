@@ -39,23 +39,42 @@ pip install -e .[dev]
 ## Quick Start
 
 ```python
-from template_sense import TemplateAnalyzer
+from template_sense.analyzer import extract_template_structure
+import json
 
-# Initialize analyzer
-analyzer = TemplateAnalyzer(
-    ai_provider="openai",  # or "anthropic"
-    canonical_fields={
-        "invoice_number": ["invoice no", "inv no", "請求書番号"],
-        "shipper_name": ["shipper", "sender", "荷送人"],
+# Load Tako's field dictionaries
+with open("tests/fixtures/tako_header_fields.json") as f:
+    tako_headers = json.load(f)
+
+with open("tests/fixtures/tako_column_fields.json") as f:
+    tako_columns = json.load(f)
+
+# Create structured field dictionary
+field_dictionary = {
+    "headers": tako_headers,
+    "columns": tako_columns
+}
+
+# Or define inline
+field_dictionary = {
+    "headers": {
+        "invoice_number": "Invoice number",
+        "shipper": "Shipper",
+        "invoice_date": "Invoice date",
+    },
+    "columns": {
+        "product_name": "Product name",
+        "quantity": "Quantity",
+        "price": "Price",
     }
-)
+}
 
-# Analyze template
-result = analyzer.analyze("path/to/template.xlsx")
+# Extract template structure
+result = extract_template_structure("path/to/template.xlsx", field_dictionary)
 
 # Access extracted metadata
-print(result["header_fields"])
-print(result["table_columns"])
+print(result["normalized_output"]["headers"]["matched"])
+print(result["normalized_output"]["columns"]["matched"])
 ```
 
 ## Features
