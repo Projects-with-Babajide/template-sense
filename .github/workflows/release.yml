@@ -1,0 +1,166 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v0.1.0, v1.2.3
+
+permissions:
+  contents: write  # Required for creating releases
+
+jobs:
+  test:
+    name: Run Tests Before Release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .[dev]
+
+    - name: Run linting
+      run: |
+        black --check .
+        ruff check .
+
+    - name: Run tests
+      run: |
+        pytest -v --cov=src/template_sense --cov-report=term-missing -m "not integration"
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-test-mock-key-for-ci' }}
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || 'sk-ant-test-mock-key-for-ci' }}
+        TEMPLATE_SENSE_AI_PROVIDER: openai
+
+  build:
+    name: Build Distribution
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build
+
+    - name: Build package
+      run: python -m build
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-packages
+        path: dist/
+
+  create-release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for changelog generation
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-packages
+        path: dist/
+
+    - name: Extract version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Get the previous tag
+        PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n '2p')
+
+        if [ -z "$PREVIOUS_TAG" ]; then
+          echo "First release - no previous tag found"
+          cat > changelog.txt <<'EOF'
+        ## What's New
+
+        This is the initial release of Template Sense - an AI-powered invoice template extraction library.
+
+        ### Features
+        - Excel template parsing and analysis
+        - AI-based field and column classification (OpenAI & Anthropic support)
+        - Multi-language translation support
+        - Fuzzy matching against canonical field dictionaries
+        - Structured JSON output
+
+        See the README for installation and usage instructions.
+        EOF
+        else
+          echo "Generating changelog from $PREVIOUS_TAG to $GITHUB_REF_NAME"
+          {
+            echo "## What's Changed"
+            echo ""
+            git log $PREVIOUS_TAG..$GITHUB_REF_NAME --pretty=format:'- %s (%h)' --no-merges
+            echo ""
+            echo ""
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...$GITHUB_REF_NAME"
+          } > changelog.txt
+        fi
+
+        # Output for debugging
+        echo "Generated changelog:"
+        cat changelog.txt
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Release v${{ steps.get_version.outputs.VERSION }}
+        body_path: changelog.txt
+        draft: false
+        prerelease: false
+        files: |
+          dist/*.tar.gz
+          dist/*.whl
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: create-release
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/template-sense
+    permissions:
+      id-token: write  # Required for trusted publishing
+
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-packages
+        path: dist/
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
