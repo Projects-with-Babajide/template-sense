@@ -26,13 +26,17 @@ from template_sense.pipeline.extraction_pipeline import run_extraction_pipeline
 def simple_field_dictionary():
     """Simple field dictionary for testing."""
     return {
-        "invoice_number": ["Invoice Number", "Invoice No", "請求書番号"],
-        "due_date": ["Due Date", "Payment Due", "支払期日"],
-        "shipper_name": ["Shipper Name", "Shipper", "荷送人名"],
-        "item_name": ["Item Name", "Product", "商品名"],
-        "quantity": ["Quantity", "Qty", "数量"],
-        "unit_price": ["Unit Price", "Price", "単価"],
-        "amount": ["Amount", "Total", "金額"],
+        "headers": {
+            "invoice_number": "Invoice number",
+            "due_date": "Due date",
+            "shipper_name": "Shipper name",
+        },
+        "columns": {
+            "item_name": "Item name",
+            "quantity": "Quantity",
+            "unit_price": "Unit price",
+            "amount": "Amount",
+        },
     }
 
 

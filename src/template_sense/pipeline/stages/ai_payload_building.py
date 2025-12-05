@@ -36,9 +36,15 @@ class AIPayloadBuildingStage(PipelineStage):
             )
 
         try:
+            # Build structured field dictionary for AI payload
+            structured_field_dict = {
+                "headers": context.header_field_dictionary,
+                "columns": context.column_field_dictionary,
+            }
+
             context.ai_payload = build_ai_payload(
                 sheet_summary=context.sheet_summary,
-                field_dictionary=context.field_dictionary,
+                field_dictionary=structured_field_dict,
                 grid=context.grid,  # Pass grid for adjacent cell context (BAT-53)
             )
             logger.info("AI payload built successfully")

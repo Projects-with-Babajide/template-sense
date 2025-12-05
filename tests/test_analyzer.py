@@ -25,13 +25,20 @@ from template_sense.errors import (
 
 
 @pytest.fixture
-def valid_field_dictionary() -> dict[str, list[str]]:
+def valid_field_dictionary() -> dict[str, dict[str, str]]:
     """Sample Tako canonical field dictionary."""
     return {
-        "invoice_number": ["Invoice No", "Inv No", "請求書番号"],
-        "shipper_name": ["Shipper", "Sender", "荷送人"],
-        "invoice_date": ["Date", "Invoice Date", "日付"],
-        "total_amount": ["Total", "Amount", "合計"],
+        "headers": {
+            "invoice_number": "Invoice number",
+            "shipper_name": "Shipper",
+            "invoice_date": "Invoice date",
+            "total_amount": "Total amount",
+        },
+        "columns": {
+            "product_name": "Product name",
+            "quantity": "Quantity",
+            "price": "Price",
+        },
     }
 
 

@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 def run_extraction_pipeline(
     file_path: str | Path,
-    field_dictionary: dict[str, list[str]],
+    field_dictionary: dict[str, dict[str, str]],
     ai_config: AIConfig | None = None,
 ) -> dict[str, Any]:
     """

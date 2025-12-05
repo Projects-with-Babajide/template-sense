@@ -40,7 +40,9 @@ class PipelineContext:
 
     Attributes:
         file_path: Path to the Excel file being processed
-        field_dictionary: Canonical field dictionary with multilingual variants
+        field_dictionary: Structured canonical field dictionary with 'headers' and 'columns' sections
+        header_field_dictionary: Internal header dict in dict[str, list[str]] format (set by ValidationStage)
+        column_field_dictionary: Internal column dict in dict[str, list[str]] format (set by ValidationStage)
         ai_config: Optional AI provider configuration
         start_time: Pipeline start time for timing calculations
         workbook: Loaded Excel workbook (set by FileLoadingStage)
@@ -63,8 +65,12 @@ class PipelineContext:
 
     # Input parameters
     file_path: Path
-    field_dictionary: dict[str, list[str]]
+    field_dictionary: dict[str, dict[str, str]]
     ai_config: AIConfig | None = None
+
+    # Internal transformed dictionaries (populated by ValidationStage)
+    header_field_dictionary: dict[str, list[str]] = field(default_factory=dict)
+    column_field_dictionary: dict[str, list[str]] = field(default_factory=dict)
 
     # Timing
     start_time: float = field(default_factory=time.perf_counter)

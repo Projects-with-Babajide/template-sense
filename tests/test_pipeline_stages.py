@@ -42,7 +42,7 @@ class TestPipelineContext:
         """Context.to_dict() returns correct structure."""
         context = PipelineContext(
             file_path=Path("test.xlsx"),
-            field_dictionary={"invoice_number": ["Invoice No"]},
+            field_dictionary={"headers": {"invoice_number": "Invoice number"}, "columns": {}},
         )
         context.normalized_output = {"test": "data"}
         context.metadata = {"sheet_name": "Sheet1"}
@@ -73,23 +73,30 @@ class TestValidationStage:
         test_file = tmp_path / "test.xlsx"
         test_file.write_text("test")
 
+        field_dict = {
+            "headers": {"invoice_number": "Invoice number"},
+            "columns": {"product_name": "Product name"},
+        }
+
         context = PipelineContext(
             file_path=test_file,
-            field_dictionary={"invoice_number": ["Invoice No"]},
+            field_dictionary=field_dict,
         )
 
         stage = ValidationStage()
         result = stage.execute(context)
 
-        # Context should be returned unchanged
+        # Context should have input field_dictionary and populated internal dicts
         assert result.file_path == test_file
-        assert result.field_dictionary == {"invoice_number": ["Invoice No"]}
+        assert result.field_dictionary == field_dict
+        assert result.header_field_dictionary == {"invoice_number": ["Invoice number"]}
+        assert result.column_field_dictionary == {"product_name": ["Product name"]}
 
     def test_validation_stage_file_not_found(self):
         """ValidationStage raises error for non-existent file."""
         context = PipelineContext(
             file_path=Path("nonexistent.xlsx"),
-            field_dictionary={"invoice_number": ["Invoice No"]},
+            field_dictionary={"headers": {"invoice_number": "Invoice number"}, "columns": {}},
         )
 
         stage = ValidationStage()
@@ -103,7 +110,7 @@ class TestValidationStage:
 
         context = PipelineContext(
             file_path=test_file,
-            field_dictionary={"invoice_number": ["Invoice No"]},
+            field_dictionary={"headers": {"invoice_number": "Invoice number"}, "columns": {}},
         )
 
         stage = ValidationStage()
@@ -111,7 +118,7 @@ class TestValidationStage:
             stage.execute(context)
 
     def test_validation_stage_empty_field_dictionary(self, tmp_path):
-        """ValidationStage raises error for empty field dictionary."""
+        """ValidationStage raises error for missing headers key."""
         test_file = tmp_path / "test.xlsx"
         test_file.write_text("test")
 
@@ -121,7 +128,7 @@ class TestValidationStage:
         )
 
         stage = ValidationStage()
-        with pytest.raises(InvalidFieldDictionaryError, match="cannot be empty"):
+        with pytest.raises(InvalidFieldDictionaryError, match="must contain 'headers' key"):
             stage.execute(context)
 
     def test_validation_stage_invalid_field_dictionary_structure(self, tmp_path):
@@ -129,15 +136,90 @@ class TestValidationStage:
         test_file = tmp_path / "test.xlsx"
         test_file.write_text("test")
 
-        # Empty list value
+        # Header value is not string
         context = PipelineContext(
             file_path=test_file,
-            field_dictionary={"invoice_number": []},
+            field_dictionary={
+                "headers": {"invoice_number": ["Invoice No"]},  # Should be string, not list
+                "columns": {},
+            },
         )
 
         stage = ValidationStage()
-        with pytest.raises(InvalidFieldDictionaryError, match="cannot be empty list"):
+        with pytest.raises(InvalidFieldDictionaryError, match="must be string"):
             stage.execute(context)
+
+    def test_validation_rejects_missing_columns_key(self, tmp_path):
+        """ValidationStage raises error for missing columns key."""
+        test_file = tmp_path / "test.xlsx"
+        test_file.write_text("test")
+
+        context = PipelineContext(
+            file_path=test_file,
+            field_dictionary={"headers": {"invoice_number": "Invoice number"}},
+        )
+
+        stage = ValidationStage()
+        with pytest.raises(InvalidFieldDictionaryError, match="must contain 'columns' key"):
+            stage.execute(context)
+
+    def test_validation_allows_empty_headers(self, tmp_path):
+        """ValidationStage allows empty headers dict."""
+        test_file = tmp_path / "test.xlsx"
+        test_file.write_text("test")
+
+        context = PipelineContext(
+            file_path=test_file,
+            field_dictionary={"headers": {}, "columns": {"product": "Product"}},
+        )
+
+        stage = ValidationStage()
+        result = stage.execute(context)
+
+        assert result.header_field_dictionary == {}
+        assert result.column_field_dictionary == {"product": ["Product"]}
+
+    def test_validation_allows_empty_columns(self, tmp_path):
+        """ValidationStage allows empty columns dict."""
+        test_file = tmp_path / "test.xlsx"
+        test_file.write_text("test")
+
+        context = PipelineContext(
+            file_path=test_file,
+            field_dictionary={"headers": {"invoice": "Invoice"}, "columns": {}},
+        )
+
+        stage = ValidationStage()
+        result = stage.execute(context)
+
+        assert result.header_field_dictionary == {"invoice": ["Invoice"]}
+        assert result.column_field_dictionary == {}
+
+    def test_validation_transforms_to_internal_format(self, tmp_path):
+        """ValidationStage transforms dict[str, str] to dict[str, list[str]]."""
+        test_file = tmp_path / "test.xlsx"
+        test_file.write_text("test")
+
+        context = PipelineContext(
+            file_path=test_file,
+            field_dictionary={
+                "headers": {"invoice_number": "Invoice number", "shipper": "Shipper"},
+                "columns": {"product": "Product", "quantity": "Quantity"},
+            },
+        )
+
+        stage = ValidationStage()
+        result = stage.execute(context)
+
+        # Values should be wrapped in lists
+        assert result.header_field_dictionary == {
+            "invoice_number": ["Invoice number"],
+            "shipper": ["Shipper"],
+        }
+        assert result.column_field_dictionary == {
+            "product": ["Product"],
+            "quantity": ["Quantity"],
+        }
 
 
 class TestFileLoadingStage:
@@ -160,7 +242,7 @@ class TestFileLoadingStage:
 
         context = PipelineContext(
             file_path=test_file,
-            field_dictionary={"invoice_number": ["Invoice No"]},
+            field_dictionary={"headers": {"invoice_number": "Invoice number"}, "columns": {}},
         )
 
         stage = FileLoadingStage()
@@ -187,7 +269,7 @@ class TestAIProviderSetupStage:
 
         context = PipelineContext(
             file_path=Path("test.xlsx"),
-            field_dictionary={"invoice_number": ["Invoice No"]},
+            field_dictionary={"headers": {"invoice_number": "Invoice number"}, "columns": {}},
         )
 
         stage = AIProviderSetupStage()
@@ -213,7 +295,7 @@ class TestMetadataStage:
 
         context = PipelineContext(
             file_path=Path("test.xlsx"),
-            field_dictionary={"invoice_number": ["Invoice No"]},
+            field_dictionary={"headers": {"invoice_number": "Invoice number"}, "columns": {}},
         )
         context.workbook = mock_workbook
         context.sheet_name = "Sheet1"
@@ -234,7 +316,7 @@ class TestMetadataStage:
 
         context = PipelineContext(
             file_path=Path("test.xlsx"),
-            field_dictionary={"invoice_number": ["Invoice No"]},
+            field_dictionary={"headers": {"invoice_number": "Invoice number"}, "columns": {}},
         )
         context.workbook = mock_workbook
         context.sheet_name = "Sheet1"
