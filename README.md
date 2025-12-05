@@ -40,32 +40,22 @@ pip install -e .[dev]
 
 ```python
 from template_sense.analyzer import extract_template_structure
-import json
 
-# Load Tako's field dictionaries
-with open("tests/fixtures/tako_header_fields.json") as f:
-    tako_headers = json.load(f)
-
-with open("tests/fixtures/tako_column_fields.json") as f:
-    tako_columns = json.load(f)
-
-# Create structured field dictionary
-field_dictionary = {
-    "headers": tako_headers,
-    "columns": tako_columns
-}
-
-# Or define inline
+# Define your canonical field dictionary
+# This should match YOUR domain's field names
 field_dictionary = {
     "headers": {
         "invoice_number": "Invoice number",
         "shipper": "Shipper",
+        "consignee": "Consignee",
         "invoice_date": "Invoice date",
+        "due_date": "Due date",
     },
     "columns": {
         "product_name": "Product name",
         "quantity": "Quantity",
         "price": "Price",
+        "amount": "Amount",
     }
 }
 
@@ -76,6 +66,8 @@ result = extract_template_structure("path/to/template.xlsx", field_dictionary)
 print(result["normalized_output"]["headers"]["matched"])
 print(result["normalized_output"]["columns"]["matched"])
 ```
+
+**Note:** The `field_dictionary` should contain YOUR canonical field names. Each key is the canonical identifier you want to use, and each value is the expected label in the template. The library will use AI to match similar fields and fuzzy matching to find the best matches.
 
 ## Features
 
