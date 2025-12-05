@@ -16,7 +16,7 @@ import os
 
 import pytest
 
-from template_sense.analyzer import analyze_template
+from template_sense.analyzer import extract_template_structure
 
 
 @pytest.mark.integration
@@ -42,24 +42,27 @@ def test_datetime_serialization_with_live_api():
     # Path to test file with datetime objects
     test_file = "tests/fixtures/live_test_invoice.xlsx"
 
-    # Field dictionary for mapping
+    # Field dictionary for mapping (structured format)
     field_dictionary = {
-        "invoice_number": ["invoice no", "invoice number", "inv no"],
-        "invoice_date": ["invoice date", "date"],
-        "due_date": ["due date", "payment due"],
-        "customer_name": ["customer", "bill to", "sold to"],
-        "shipper_name": ["shipper", "sender"],
-        "item_description": ["description", "item", "product"],
-        "quantity": ["qty", "quantity"],
-        "unit_price": ["unit price", "price"],
-        "amount": ["amount", "total"],
+        "headers": {
+            "invoice_number": "Invoice number",
+            "invoice_date": "Invoice date",
+            "due_date": "Due date",
+            "customer_name": "Customer",
+            "shipper_name": "Shipper",
+        },
+        "columns": {
+            "item_description": "Description",
+            "quantity": "Quantity",
+            "unit_price": "Unit price",
+            "amount": "Amount",
+        },
     }
 
     # Run full analysis (this makes REAL API calls)
-    result = analyze_template(
+    result = extract_template_structure(
         file_path=test_file,
         field_dictionary=field_dictionary,
-        auto_mapping_threshold=80.0,
     )
 
     # Verify no errors occurred
@@ -76,35 +79,36 @@ def test_datetime_serialization_with_live_api():
                 "datetime" not in error_msg
             ), f"Found datetime-related error in recovery events: {event}"
 
-    # Verify that at least some fields were extracted
+    # Verify that at least some data was extracted
     # (We don't care about the exact results, just that it didn't crash)
-    assert "template_metadata" in result
-    assert "canonical_template" in result
+    assert "normalized_output" in result
+    assert "metadata" in result
 
     # If there are header fields, verify they're in the expected format
-    if result["canonical_template"].get("header_fields"):
-        for field in result["canonical_template"]["header_fields"]:
-            assert "canonical_key" in field
-            assert "value" in field
-            # Values might be datetime ISO strings, which is fine
-            if field["value"] is not None:
-                assert isinstance(
-                    field["value"], str | int | float | bool
-                ), f"Field value should be JSON-serializable type, got {type(field['value'])}"
+    if result["normalized_output"].get("headers"):
+        headers = result["normalized_output"]["headers"]
+        if "matched" in headers:
+            for field in headers["matched"]:
+                assert "canonical_key" in field
+                # Values might be datetime ISO strings, which is fine
+                if field.get("value") is not None:
+                    assert isinstance(
+                        field["value"], str | int | float | bool
+                    ), f"Field value should be JSON-serializable type, got {type(field['value'])}"
 
-    # If there are tables, verify they're in the expected format
-    if result["canonical_template"].get("tables"):
-        for table in result["canonical_template"]["tables"]:
-            assert "table_index" in table
-            assert "columns" in table
-            # Verify sample_data values are JSON-serializable
-            if table.get("sample_data"):
-                for row in table["sample_data"]:
-                    for value in row:
+    # If there are table columns, verify they're in the expected format
+    if result["normalized_output"].get("columns"):
+        columns = result["normalized_output"]["columns"]
+        if "matched" in columns:
+            for col in columns["matched"]:
+                assert "canonical_key" in col
+                # Sample values should be JSON-serializable
+                if col.get("sample_values"):
+                    for value in col["sample_values"]:
                         if value is not None:
                             assert isinstance(
                                 value, str | int | float | bool
-                            ), f"Table value should be JSON-serializable type, got {type(value)}"
+                            ), f"Column value should be JSON-serializable type, got {type(value)}"
 
 
 @pytest.mark.integration
@@ -121,22 +125,26 @@ def test_datetime_objects_converted_to_iso_format():
     test_file = "tests/fixtures/live_test_invoice.xlsx"
 
     field_dictionary = {
-        "invoice_date": ["invoice date", "date"],
-        "due_date": ["due date", "payment due"],
+        "headers": {
+            "invoice_date": "Invoice date",
+            "due_date": "Due date",
+        },
+        "columns": {},
     }
 
-    result = analyze_template(
+    result = extract_template_structure(
         file_path=test_file,
         field_dictionary=field_dictionary,
-        auto_mapping_threshold=80.0,
     )
 
     # Find date fields in the results
     date_fields = []
-    if result["canonical_template"].get("header_fields"):
-        for field in result["canonical_template"]["header_fields"]:
-            if field.get("canonical_key") in ["invoice_date", "due_date"]:
-                date_fields.append(field)
+    if result["normalized_output"].get("headers"):
+        headers = result["normalized_output"]["headers"]
+        if "matched" in headers:
+            for field in headers["matched"]:
+                if field.get("canonical_key") in ["invoice_date", "due_date"]:
+                    date_fields.append(field)
 
     # If we found date fields, verify they're strings (ISO format)
     # Note: The AI might not classify them as dates, so this is optional
