@@ -11,6 +11,7 @@ from template_sense.output.canonical_aggregator import (
     CanonicalTable,
     CanonicalTableColumn,
     CanonicalTemplate,
+    CanonicalTemplateInput,
     build_canonical_template,
 )
 from template_sense.output.normalized_output_builder import build_normalized_output
@@ -21,6 +22,7 @@ __all__ = [
     "CanonicalLineItem",
     "CanonicalTable",
     "CanonicalTemplate",
+    "CanonicalTemplateInput",
     "build_canonical_template",
     "build_normalized_output",
 ]

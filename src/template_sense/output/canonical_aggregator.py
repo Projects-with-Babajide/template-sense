@@ -52,6 +52,36 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class CanonicalTemplateInput:
+    """
+    Input data for canonical template building.
+
+    This dataclass aggregates all pipeline outputs needed to build a canonical
+    template, replacing the 8-parameter function signature with a single
+    structured object.
+
+    Attributes:
+        sheet_name: Name of the Excel sheet (required).
+        header_candidate_blocks: Header regions detected by heuristics.
+        table_candidate_blocks: Table regions detected by heuristics.
+        classified_headers: Header fields classified by AI.
+        classified_columns: Table columns classified by AI.
+        extracted_line_items: Line items extracted by AI.
+        header_match_results: Fuzzy matching results for headers.
+        column_match_results: Fuzzy matching results for columns.
+    """
+
+    sheet_name: str
+    header_candidate_blocks: list[HeaderCandidateBlock] = field(default_factory=list)
+    table_candidate_blocks: list[TableCandidateBlock] = field(default_factory=list)
+    classified_headers: list[ClassifiedHeaderField] = field(default_factory=list)
+    classified_columns: list[ClassifiedTableColumn] = field(default_factory=list)
+    extracted_line_items: list[ExtractedLineItem] = field(default_factory=list)
+    header_match_results: list[FieldMatchResult] = field(default_factory=list)
+    column_match_results: list[FieldMatchResult] = field(default_factory=list)
+
+
+@dataclass
 class CanonicalHeaderField:
     """
     Final merged header field with all metadata.
@@ -273,20 +303,7 @@ class CanonicalTemplate:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-def build_canonical_template(
-    # Context
-    sheet_name: str,
-    # Extraction layer outputs
-    header_candidate_blocks: list[HeaderCandidateBlock],
-    table_candidate_blocks: list[TableCandidateBlock],
-    # AI layer outputs
-    classified_headers: list[ClassifiedHeaderField],
-    classified_columns: list[ClassifiedTableColumn],
-    extracted_line_items: list[ExtractedLineItem],
-    # Mapping layer outputs
-    header_match_results: list[FieldMatchResult],
-    column_match_results: list[FieldMatchResult],
-) -> CanonicalTemplate:
+def build_canonical_template(input_data: CanonicalTemplateInput) -> CanonicalTemplate:
     """
     Merge all pipeline outputs into a unified canonical template.
 
@@ -295,14 +312,15 @@ def build_canonical_template(
     them into a structured template representation.
 
     Args:
-        sheet_name: Name of the Excel sheet (non-empty string).
-        header_candidate_blocks: Header regions detected by heuristics.
-        table_candidate_blocks: Table regions detected by heuristics.
-        classified_headers: Header fields classified by AI.
-        classified_columns: Table columns classified by AI.
-        extracted_line_items: Line items extracted by AI.
-        header_match_results: Fuzzy matching results for headers.
-        column_match_results: Fuzzy matching results for columns.
+        input_data: CanonicalTemplateInput containing all pipeline outputs:
+            - sheet_name: Name of the Excel sheet (non-empty string).
+            - header_candidate_blocks: Header regions detected by heuristics.
+            - table_candidate_blocks: Table regions detected by heuristics.
+            - classified_headers: Header fields classified by AI.
+            - classified_columns: Table columns classified by AI.
+            - extracted_line_items: Line items extracted by AI.
+            - header_match_results: Fuzzy matching results for headers.
+            - column_match_results: Fuzzy matching results for columns.
 
     Returns:
         CanonicalTemplate: Unified template structure with all metadata.
@@ -311,52 +329,53 @@ def build_canonical_template(
         ValueError: If sheet_name is empty or None, or if any list parameter is None.
 
     Example:
-        >>> template = build_canonical_template(
+        >>> from template_sense.output.canonical_aggregator import (
+        ...     build_canonical_template,
+        ...     CanonicalTemplateInput,
+        ... )
+        >>> input_data = CanonicalTemplateInput(
         ...     sheet_name="Sheet1",
         ...     header_candidate_blocks=[...],
-        ...     table_candidate_blocks=[...],
         ...     classified_headers=[...],
         ...     classified_columns=[...],
-        ...     extracted_line_items=[...],
-        ...     header_match_results=[...],
-        ...     column_match_results=[...],
         ... )
+        >>> template = build_canonical_template(input_data)
         >>> print(f"Found {template.total_header_fields} header fields")
         >>> print(f"Matched {template.matched_header_fields} fields")
     """
     # Step 1: Input validation
-    if not sheet_name or not isinstance(sheet_name, str):
+    if not input_data.sheet_name or not isinstance(input_data.sheet_name, str):
         raise ValueError("sheet_name must be a non-empty string")
 
-    if header_candidate_blocks is None:
+    if input_data.header_candidate_blocks is None:
         raise ValueError("header_candidate_blocks cannot be None (empty list is valid)")
-    if table_candidate_blocks is None:
+    if input_data.table_candidate_blocks is None:
         raise ValueError("table_candidate_blocks cannot be None (empty list is valid)")
-    if classified_headers is None:
+    if input_data.classified_headers is None:
         raise ValueError("classified_headers cannot be None (empty list is valid)")
-    if classified_columns is None:
+    if input_data.classified_columns is None:
         raise ValueError("classified_columns cannot be None (empty list is valid)")
-    if extracted_line_items is None:
+    if input_data.extracted_line_items is None:
         raise ValueError("extracted_line_items cannot be None (empty list is valid)")
-    if header_match_results is None:
+    if input_data.header_match_results is None:
         raise ValueError("header_match_results cannot be None (empty list is valid)")
-    if column_match_results is None:
+    if input_data.column_match_results is None:
         raise ValueError("column_match_results cannot be None (empty list is valid)")
 
     logger.info(
-        f"Building canonical template for sheet '{sheet_name}': "
-        f"{len(classified_headers)} headers, {len(classified_columns)} columns, "
-        f"{len(extracted_line_items)} line items"
+        f"Building canonical template for sheet '{input_data.sheet_name}': "
+        f"{len(input_data.classified_headers)} headers, {len(input_data.classified_columns)} columns, "
+        f"{len(input_data.extracted_line_items)} line items"
     )
 
     # Step 2: Build header field index (match by original label)
     # Create mapping: original_label → FieldMatchResult
     header_match_map: dict[str, FieldMatchResult] = {
-        result.original_text: result for result in header_match_results
+        result.original_text: result for result in input_data.header_match_results
     }
 
     canonical_headers: list[CanonicalHeaderField] = []
-    for header in classified_headers:
+    for header in input_data.classified_headers:
         # Look up fuzzy match result (if exists)
         match_result = header_match_map.get(header.raw_label) if header.raw_label else None
 
@@ -380,12 +399,12 @@ def build_canonical_template(
     # Step 3: Build table column index (match by original label)
     # Create mapping: original_label → FieldMatchResult
     column_match_map: dict[str, FieldMatchResult] = {
-        result.original_text: result for result in column_match_results
+        result.original_text: result for result in input_data.column_match_results
     }
 
     # Group columns by table_block_index
     columns_by_table: dict[int, list[CanonicalTableColumn]] = {}
-    for column in classified_columns:
+    for column in input_data.classified_columns:
         # Look up fuzzy match result (if exists)
         match_result = column_match_map.get(column.raw_label) if column.raw_label else None
 
@@ -412,7 +431,7 @@ def build_canonical_template(
 
     # Step 4: Aggregate line items by table_index
     line_items_by_table: dict[int, list[CanonicalLineItem]] = {}
-    for item in extracted_line_items:
+    for item in input_data.extracted_line_items:
         canonical_item = CanonicalLineItem(
             row_index=item.row_index,
             line_number=item.line_number,
@@ -431,7 +450,7 @@ def build_canonical_template(
 
     # Step 5: Build CanonicalTable objects
     canonical_tables: list[CanonicalTable] = []
-    for idx, table_block in enumerate(table_candidate_blocks):
+    for idx, table_block in enumerate(input_data.table_candidate_blocks):
         # Find matching columns and line items for this table
         table_columns = columns_by_table.get(idx, [])
         table_line_items = line_items_by_table.get(idx, [])
@@ -466,7 +485,7 @@ def build_canonical_template(
 
     # Step 7: Return CanonicalTemplate
     return CanonicalTemplate(
-        sheet_name=sheet_name,
+        sheet_name=input_data.sheet_name,
         header_fields=canonical_headers,
         tables=canonical_tables,
         total_header_fields=total_header_fields,
