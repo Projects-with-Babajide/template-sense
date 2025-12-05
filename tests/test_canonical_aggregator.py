@@ -16,6 +16,7 @@ from template_sense.extraction.table_candidates import TableCandidateBlock
 from template_sense.mapping.fuzzy_field_matching import FieldMatchResult
 from template_sense.output.canonical_aggregator import (
     CanonicalTemplate,
+    CanonicalTemplateInput,
     build_canonical_template,
 )
 
@@ -211,14 +212,16 @@ def test_build_canonical_template_simple_case():
 
     # Execute
     result = build_canonical_template(
-        sheet_name=sheet_name,
-        header_candidate_blocks=header_blocks,
-        table_candidate_blocks=table_blocks,
-        classified_headers=classified_headers,
-        classified_columns=classified_columns,
-        extracted_line_items=line_items,
-        header_match_results=header_matches,
-        column_match_results=column_matches,
+        CanonicalTemplateInput(
+            sheet_name=sheet_name,
+            header_candidate_blocks=header_blocks,
+            table_candidate_blocks=table_blocks,
+            classified_headers=classified_headers,
+            classified_columns=classified_columns,
+            extracted_line_items=line_items,
+            header_match_results=header_matches,
+            column_match_results=column_matches,
+        )
     )
 
     # Verify structure
@@ -275,14 +278,16 @@ def test_build_canonical_template_simple_case():
 def test_build_canonical_template_empty_inputs():
     """Test aggregation with empty inputs (valid edge case)."""
     result = build_canonical_template(
-        sheet_name="EmptySheet",
-        header_candidate_blocks=[],
-        table_candidate_blocks=[],
-        classified_headers=[],
-        classified_columns=[],
-        extracted_line_items=[],
-        header_match_results=[],
-        column_match_results=[],
+        CanonicalTemplateInput(
+            sheet_name="EmptySheet",
+            header_candidate_blocks=[],
+            table_candidate_blocks=[],
+            classified_headers=[],
+            classified_columns=[],
+            extracted_line_items=[],
+            header_match_results=[],
+            column_match_results=[],
+        )
     )
 
     # Verify structure
@@ -308,14 +313,16 @@ def test_build_canonical_template_unmatched_fields():
     ]
 
     result = build_canonical_template(
-        sheet_name="Sheet1",
-        header_candidate_blocks=[create_header_candidate_block()],
-        table_candidate_blocks=[],
-        classified_headers=classified_headers,
-        classified_columns=[],
-        extracted_line_items=[],
-        header_match_results=[],  # No matches!
-        column_match_results=[],
+        CanonicalTemplateInput(
+            sheet_name="Sheet1",
+            header_candidate_blocks=[create_header_candidate_block()],
+            table_candidate_blocks=[],
+            classified_headers=classified_headers,
+            classified_columns=[],
+            extracted_line_items=[],
+            header_match_results=[],  # No matches!
+            column_match_results=[],
+        )
     )
 
     # Verify unmatched headers
@@ -363,14 +370,16 @@ def test_build_canonical_template_multiple_tables():
     ]
 
     result = build_canonical_template(
-        sheet_name="MultiTable",
-        header_candidate_blocks=[],
-        table_candidate_blocks=table_blocks,
-        classified_headers=[],
-        classified_columns=classified_columns,
-        extracted_line_items=line_items,
-        header_match_results=[],
-        column_match_results=[],  # No matches for simplicity
+        CanonicalTemplateInput(
+            sheet_name="MultiTable",
+            header_candidate_blocks=[],
+            table_candidate_blocks=table_blocks,
+            classified_headers=[],
+            classified_columns=classified_columns,
+            extracted_line_items=line_items,
+            header_match_results=[],
+            column_match_results=[],  # No matches for simplicity
+        )
     )
 
     # Verify table count
@@ -422,14 +431,16 @@ def test_build_canonical_template_preserves_metadata():
     ]
 
     result = build_canonical_template(
-        sheet_name="Sheet1",
-        header_candidate_blocks=[create_header_candidate_block()],
-        table_candidate_blocks=[],
-        classified_headers=classified_headers,
-        classified_columns=[],
-        extracted_line_items=[],
-        header_match_results=header_matches,
-        column_match_results=[],
+        CanonicalTemplateInput(
+            sheet_name="Sheet1",
+            header_candidate_blocks=[create_header_candidate_block()],
+            table_candidate_blocks=[],
+            classified_headers=classified_headers,
+            classified_columns=[],
+            extracted_line_items=[],
+            header_match_results=header_matches,
+            column_match_results=[],
+        )
     )
 
     # Verify all metadata preserved
@@ -460,14 +471,16 @@ def test_build_canonical_template_coordinates():
     ]
 
     result = build_canonical_template(
-        sheet_name="Sheet1",
-        header_candidate_blocks=[create_header_candidate_block()],
-        table_candidate_blocks=table_blocks,
-        classified_headers=classified_headers,
-        classified_columns=classified_columns,
-        extracted_line_items=[],
-        header_match_results=[],
-        column_match_results=[],
+        CanonicalTemplateInput(
+            sheet_name="Sheet1",
+            header_candidate_blocks=[create_header_candidate_block()],
+            table_candidate_blocks=table_blocks,
+            classified_headers=classified_headers,
+            classified_columns=classified_columns,
+            extracted_line_items=[],
+            header_match_results=[],
+            column_match_results=[],
+        )
     )
 
     # Verify header coordinates
@@ -504,25 +517,29 @@ def test_build_canonical_template_deterministic_output():
 
     # Run twice
     result1 = build_canonical_template(
-        sheet_name=sheet_name,
-        header_candidate_blocks=header_blocks,
-        table_candidate_blocks=table_blocks,
-        classified_headers=classified_headers,
-        classified_columns=classified_columns,
-        extracted_line_items=line_items,
-        header_match_results=header_matches,
-        column_match_results=column_matches,
+        CanonicalTemplateInput(
+            sheet_name=sheet_name,
+            header_candidate_blocks=header_blocks,
+            table_candidate_blocks=table_blocks,
+            classified_headers=classified_headers,
+            classified_columns=classified_columns,
+            extracted_line_items=line_items,
+            header_match_results=header_matches,
+            column_match_results=column_matches,
+        )
     )
 
     result2 = build_canonical_template(
-        sheet_name=sheet_name,
-        header_candidate_blocks=header_blocks,
-        table_candidate_blocks=table_blocks,
-        classified_headers=classified_headers,
-        classified_columns=classified_columns,
-        extracted_line_items=line_items,
-        header_match_results=header_matches,
-        column_match_results=column_matches,
+        CanonicalTemplateInput(
+            sheet_name=sheet_name,
+            header_candidate_blocks=header_blocks,
+            table_candidate_blocks=table_blocks,
+            classified_headers=classified_headers,
+            classified_columns=classified_columns,
+            extracted_line_items=line_items,
+            header_match_results=header_matches,
+            column_match_results=column_matches,
+        )
     )
 
     # Verify outputs are identical
@@ -552,52 +569,60 @@ def test_build_canonical_template_invalid_inputs():
     # Test empty sheet_name
     with pytest.raises(ValueError, match="sheet_name must be a non-empty string"):
         build_canonical_template(
-            sheet_name="",
-            header_candidate_blocks=[],
-            table_candidate_blocks=[],
-            classified_headers=[],
-            classified_columns=[],
-            extracted_line_items=[],
-            header_match_results=[],
-            column_match_results=[],
+            CanonicalTemplateInput(
+                sheet_name="",
+                header_candidate_blocks=[],
+                table_candidate_blocks=[],
+                classified_headers=[],
+                classified_columns=[],
+                extracted_line_items=[],
+                header_match_results=[],
+                column_match_results=[],
+            )
         )
 
     # Test None sheet_name
     with pytest.raises(ValueError, match="sheet_name must be a non-empty string"):
         build_canonical_template(
-            sheet_name=None,
-            header_candidate_blocks=[],
-            table_candidate_blocks=[],
-            classified_headers=[],
-            classified_columns=[],
-            extracted_line_items=[],
-            header_match_results=[],
-            column_match_results=[],
+            CanonicalTemplateInput(
+                sheet_name=None,
+                header_candidate_blocks=[],
+                table_candidate_blocks=[],
+                classified_headers=[],
+                classified_columns=[],
+                extracted_line_items=[],
+                header_match_results=[],
+                column_match_results=[],
+            )
         )
 
     # Test None list parameters
     with pytest.raises(ValueError, match="header_candidate_blocks cannot be None"):
         build_canonical_template(
-            sheet_name="Sheet1",
-            header_candidate_blocks=None,
-            table_candidate_blocks=[],
-            classified_headers=[],
-            classified_columns=[],
-            extracted_line_items=[],
-            header_match_results=[],
-            column_match_results=[],
+            CanonicalTemplateInput(
+                sheet_name="Sheet1",
+                header_candidate_blocks=None,
+                table_candidate_blocks=[],
+                classified_headers=[],
+                classified_columns=[],
+                extracted_line_items=[],
+                header_match_results=[],
+                column_match_results=[],
+            )
         )
 
     with pytest.raises(ValueError, match="classified_headers cannot be None"):
         build_canonical_template(
-            sheet_name="Sheet1",
-            header_candidate_blocks=[],
-            table_candidate_blocks=[],
-            classified_headers=None,
-            classified_columns=[],
-            extracted_line_items=[],
-            header_match_results=[],
-            column_match_results=[],
+            CanonicalTemplateInput(
+                sheet_name="Sheet1",
+                header_candidate_blocks=[],
+                table_candidate_blocks=[],
+                classified_headers=None,
+                classified_columns=[],
+                extracted_line_items=[],
+                header_match_results=[],
+                column_match_results=[],
+            )
         )
 
 
@@ -615,14 +640,16 @@ def test_build_canonical_template_with_subtotal_line_items():
     ]
 
     result = build_canonical_template(
-        sheet_name="Sheet1",
-        header_candidate_blocks=[],
-        table_candidate_blocks=[create_table_candidate_block()],
-        classified_headers=[],
-        classified_columns=[],
-        extracted_line_items=line_items,
-        header_match_results=[],
-        column_match_results=[],
+        CanonicalTemplateInput(
+            sheet_name="Sheet1",
+            header_candidate_blocks=[],
+            table_candidate_blocks=[create_table_candidate_block()],
+            classified_headers=[],
+            classified_columns=[],
+            extracted_line_items=line_items,
+            header_match_results=[],
+            column_match_results=[],
+        )
     )
 
     # Verify line items
@@ -649,14 +676,16 @@ def test_build_canonical_template_column_sample_values():
 
     # The factory creates sample_values by default
     result = build_canonical_template(
-        sheet_name="Sheet1",
-        header_candidate_blocks=[],
-        table_candidate_blocks=[create_table_candidate_block()],
-        classified_headers=[],
-        classified_columns=classified_columns,
-        extracted_line_items=[],
-        header_match_results=[],
-        column_match_results=[],
+        CanonicalTemplateInput(
+            sheet_name="Sheet1",
+            header_candidate_blocks=[],
+            table_candidate_blocks=[create_table_candidate_block()],
+            classified_headers=[],
+            classified_columns=classified_columns,
+            extracted_line_items=[],
+            header_match_results=[],
+            column_match_results=[],
+        )
     )
 
     # Verify sample values preserved
