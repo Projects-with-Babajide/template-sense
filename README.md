@@ -39,24 +39,35 @@ pip install -e .[dev]
 ## Quick Start
 
 ```python
-from template_sense import TemplateAnalyzer
+from template_sense.analyzer import extract_template_structure
 
-# Initialize analyzer
-analyzer = TemplateAnalyzer(
-    ai_provider="openai",  # or "anthropic"
-    canonical_fields={
-        "invoice_number": ["invoice no", "inv no", "請求書番号"],
-        "shipper_name": ["shipper", "sender", "荷送人"],
+# Define your canonical field dictionary
+# This should match YOUR domain's field names
+field_dictionary = {
+    "headers": {
+        "invoice_number": "Invoice number",
+        "shipper": "Shipper",
+        "consignee": "Consignee",
+        "invoice_date": "Invoice date",
+        "due_date": "Due date",
+    },
+    "columns": {
+        "product_name": "Product name",
+        "quantity": "Quantity",
+        "price": "Price",
+        "amount": "Amount",
     }
-)
+}
 
-# Analyze template
-result = analyzer.analyze("path/to/template.xlsx")
+# Extract template structure
+result = extract_template_structure("path/to/template.xlsx", field_dictionary)
 
 # Access extracted metadata
-print(result["header_fields"])
-print(result["table_columns"])
+print(result["normalized_output"]["headers"]["matched"])
+print(result["normalized_output"]["columns"]["matched"])
 ```
+
+**Note:** The `field_dictionary` should contain YOUR canonical field names. Each key is the canonical identifier you want to use, and each value is the expected label in the template. The library will use AI to match similar fields and fuzzy matching to find the best matches.
 
 ## Features
 
