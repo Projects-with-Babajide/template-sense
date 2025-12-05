@@ -27,7 +27,7 @@ PathLike = str | Path
 
 def extract_template_structure(
     file_path: PathLike,
-    field_dictionary: dict[str, list[str]],
+    field_dictionary: dict[str, dict[str, str]],
     ai_config: AIConfig | None = None,
 ) -> dict[str, Any]:
     """
@@ -39,11 +39,17 @@ def extract_template_structure(
 
     Args:
         file_path: Path to Excel file (.xlsx or .xls). Can be string or Path object.
-        field_dictionary: Tako's canonical field dictionary mapping canonical keys
-                         to lists of known label variants. For example:
+        field_dictionary: Structured canonical field dictionary with separate
+                         "headers" and "columns" sections. For example:
                          {
-                             "invoice_number": ["Invoice No", "請求書番号"],
-                             "shipper_name": ["Shipper", "荷送人"],
+                             "headers": {
+                                 "invoice_number": "Invoice number",
+                                 "shipper": "Shipper",
+                             },
+                             "columns": {
+                                 "product_name": "Product name",
+                                 "quantity": "Quantity",
+                             }
                          }
         ai_config: Optional AI provider configuration. If not provided, defaults
                   to environment variable configuration (TEMPLATE_SENSE_AI_PROVIDER,
@@ -71,9 +77,16 @@ def extract_template_structure(
     Example:
         >>> from template_sense.analyzer import extract_template_structure
         >>> field_dict = {
-        ...     "invoice_number": ["Invoice No", "Inv No", "請求書番号"],
-        ...     "shipper_name": ["Shipper", "Sender", "荷送人"],
-        ...     "invoice_date": ["Date", "Invoice Date", "日付"],
+        ...     "headers": {
+        ...         "invoice_number": "Invoice number",
+        ...         "shipper": "Shipper",
+        ...         "invoice_date": "Invoice date",
+        ...     },
+        ...     "columns": {
+        ...         "product_name": "Product name",
+        ...         "quantity": "Quantity",
+        ...         "price": "Price",
+        ...     }
         ... }
         >>> result = extract_template_structure("invoice.xlsx", field_dict)
         >>> print(result["normalized_output"]["headers"]["matched"])
