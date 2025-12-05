@@ -34,6 +34,16 @@ class TestAIProviderInterface:
             def translate_text(self, text: str, source_lang: str, target_lang: str = "en") -> str:
                 return text
 
+            def generate_text(
+                self,
+                prompt: str,
+                system_message: str | None = None,
+                max_tokens: int = 150,
+                temperature: float = 0.0,
+                json_mode: bool = True,
+            ) -> str:
+                return "generated"
+
         config = AIConfig(provider="openai", api_key="sk-test")
 
         with pytest.raises(TypeError) as exc_info:
@@ -54,6 +64,16 @@ class TestAIProviderInterface:
 
             def translate_text(self, text: str, source_lang: str, target_lang: str = "en") -> str:
                 return text
+
+            def generate_text(
+                self,
+                prompt: str,
+                system_message: str | None = None,
+                max_tokens: int = 150,
+                temperature: float = 0.0,
+                json_mode: bool = True,
+            ) -> str:
+                return "generated"
 
         config = AIConfig(provider="openai", api_key="sk-test")
 
@@ -76,6 +96,16 @@ class TestAIProviderInterface:
 
             def translate_text(self, text: str, source_lang: str, target_lang: str = "en") -> str:
                 return text
+
+            def generate_text(
+                self,
+                prompt: str,
+                system_message: str | None = None,
+                max_tokens: int = 150,
+                temperature: float = 0.0,
+                json_mode: bool = True,
+            ) -> str:
+                return "generated"
 
         config = AIConfig(provider="openai", api_key="sk-test")
 
@@ -124,6 +154,16 @@ class TestAIProviderInterface:
             def translate_text(self, text: str, source_lang: str, target_lang: str = "en") -> str:
                 return f"translated:{text}"
 
+            def generate_text(
+                self,
+                prompt: str,
+                system_message: str | None = None,
+                max_tokens: int = 150,
+                temperature: float = 0.0,
+                json_mode: bool = True,
+            ) -> str:
+                return "generated text"
+
         config = AIConfig(provider="openai", api_key="sk-test", model="gpt-4")
         provider = CompleteProvider(config)
 
@@ -150,6 +190,16 @@ class TestAIProviderInterface:
 
             def translate_text(self, text: str, source_lang: str, target_lang: str = "en") -> str:
                 return text
+
+            def generate_text(
+                self,
+                prompt: str,
+                system_message: str | None = None,
+                max_tokens: int = 150,
+                temperature: float = 0.0,
+                json_mode: bool = True,
+            ) -> str:
+                return "generated"
 
         config = AIConfig(provider="openai", api_key="sk-test")
         provider = MockProvider(config)
@@ -179,6 +229,16 @@ class TestAIProviderInterface:
                     return "Invoice Number"
                 return text
 
+            def generate_text(
+                self,
+                prompt: str,
+                system_message: str | None = None,
+                max_tokens: int = 150,
+                temperature: float = 0.0,
+                json_mode: bool = True,
+            ) -> str:
+                return "generated"
+
         config = AIConfig(provider="openai", api_key="sk-test")
         provider = MockProvider(config)
 
@@ -203,6 +263,16 @@ class TestAIProviderInterface:
 
             def translate_text(self, text: str, source_lang: str, target_lang: str = "en") -> str:
                 return text
+
+            def generate_text(
+                self,
+                prompt: str,
+                system_message: str | None = None,
+                max_tokens: int = 150,
+                temperature: float = 0.0,
+                json_mode: bool = True,
+            ) -> str:
+                return "generated"
 
         config = AIConfig(
             provider="openai", api_key="sk-secret-123", model="gpt-4", timeout_seconds=60

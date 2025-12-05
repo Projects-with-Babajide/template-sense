@@ -163,6 +163,76 @@ class BaseAIProvider(AIProvider):
             # Wrap provider-specific exceptions
             raise self._wrap_api_error(e, "translate_text") from e
 
+    def generate_text(
+        self,
+        prompt: str,
+        system_message: str | None = None,
+        max_tokens: int = 150,
+        temperature: float = 0.0,
+        json_mode: bool = True,
+    ) -> str:
+        """
+        Generate text response using AI.
+
+        This template method orchestrates the text generation process:
+        1. Validates the prompt
+        2. Calls provider-specific API (delegated to subclass)
+        3. Validates and returns the response
+
+        Args:
+            prompt: The user prompt/question to send to the AI
+            system_message: Optional system instruction to guide behavior
+            max_tokens: Maximum tokens in response (default: 150)
+            temperature: Sampling temperature - 0.0 for deterministic (default: 0.0)
+            json_mode: Whether to request JSON-formatted response (default: True)
+
+        Returns:
+            Generated text response from the AI provider
+
+        Raises:
+            AIProviderError: On API errors, timeouts, or invalid responses
+            ValueError: If prompt is empty or invalid
+        """
+        # Validate prompt
+        if not prompt or not prompt.strip():
+            raise ValueError("Prompt cannot be empty")
+
+        try:
+            logger.debug(
+                "Sending generate_text request (provider=%s, model=%s)",
+                self.provider_name,
+                self.model,
+            )
+
+            # Call provider-specific API (delegated to subclass)
+            response_text = self._call_generate_api(
+                prompt=prompt,
+                system_message=system_message,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                json_mode=json_mode,
+            )
+
+            if not response_text:
+                raise AIProviderError(
+                    provider_name=self.provider_name,
+                    error_details="Empty response from API",
+                    request_type="generate_text",
+                )
+
+            logger.debug("Successfully generated text response")
+            return response_text
+
+        except AIProviderError:
+            # Re-raise our own errors
+            raise
+        except ValueError:
+            # Re-raise validation errors
+            raise
+        except Exception as e:
+            # Wrap provider-specific exceptions
+            raise self._wrap_api_error(e, "generate_text") from e
+
     @abstractmethod
     def _call_classify_api(self, system_message: str, user_message: str) -> str:
         """
@@ -197,6 +267,36 @@ class BaseAIProvider(AIProvider):
 
         Returns:
             Translated text from the API
+
+        Raises:
+            Provider-specific exceptions (will be wrapped by BaseAIProvider)
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def _call_generate_api(
+        self,
+        prompt: str,
+        system_message: str | None,
+        max_tokens: int,
+        temperature: float,
+        json_mode: bool,
+    ) -> str:
+        """
+        Execute provider-specific text generation API call.
+
+        Subclasses must implement this method to call their specific API
+        (OpenAI, Anthropic, etc.) and return the raw response text.
+
+        Args:
+            prompt: User prompt/question
+            system_message: Optional system instruction
+            max_tokens: Maximum tokens in response
+            temperature: Sampling temperature (0.0-1.0)
+            json_mode: Whether to request JSON-formatted response
+
+        Returns:
+            Generated text from the API
 
         Raises:
             Provider-specific exceptions (will be wrapped by BaseAIProvider)
@@ -371,6 +471,7 @@ class BaseAIProvider(AIProvider):
             )
 
         try:
+            # Try parsing directly first
             result = json.loads(content)
             logger.debug("Successfully parsed JSON response")
 
@@ -385,6 +486,27 @@ class BaseAIProvider(AIProvider):
 
             return result
         except json.JSONDecodeError as e:
+            # If direct parsing fails, try to extract JSON from text with preamble
+            # (Anthropic sometimes adds text before the JSON)
+            json_start = content.find("{")
+            if json_start > 0:
+                try:
+                    result = json.loads(content[json_start:])
+                    logger.debug("Successfully parsed JSON after stripping preamble")
+
+                    # Validate expected response key
+                    expected_key = self._get_expected_response_key(context)
+                    if expected_key not in result:
+                        raise AIProviderError(
+                            provider_name=self.provider_name,
+                            error_details=f"Response missing '{expected_key}' key for context '{context}'",
+                            request_type=request_type,
+                        )
+
+                    return result
+                except json.JSONDecodeError:
+                    pass  # Fall through to original error
+
             raise AIProviderError(
                 provider_name=self.provider_name,
                 error_details=f"Invalid JSON in response: {str(e)}",

@@ -85,6 +85,8 @@ SEMANTIC_MATCHING_CONFIDENCE_THRESHOLD = (
 )
 SEMANTIC_MATCHING_FUZZY_FLOOR = 30.0  # Minimum fuzzy score to attempt semantic matching (0.0-100.0)
 SEMANTIC_MATCHING_TIMEOUT_SECONDS = 10  # Timeout for semantic matching AI requests
+SEMANTIC_MATCHING_MAX_TOKENS = 150  # Maximum tokens for semantic matching AI responses
+SEMANTIC_MATCHING_TEMPERATURE = 0.0  # Deterministic temperature for semantic matching
 
 # ============================================================
 # Error Recovery Thresholds
@@ -150,6 +152,12 @@ __all__ = [
     "ANTHROPIC_TRANSLATION_MAX_TOKENS",
     "DEFAULT_TARGET_LANGUAGE",
     "TRANSLATION_TIMEOUT_SECONDS",
+    "ENABLE_AI_SEMANTIC_MATCHING",
+    "SEMANTIC_MATCHING_CONFIDENCE_THRESHOLD",
+    "SEMANTIC_MATCHING_FUZZY_FLOOR",
+    "SEMANTIC_MATCHING_TIMEOUT_SECONDS",
+    "SEMANTIC_MATCHING_MAX_TOKENS",
+    "SEMANTIC_MATCHING_TEMPERATURE",
     "MIN_AI_CONFIDENCE_WARNING",
     "MIN_FUZZY_MATCH_WARNING",
     "MAX_FIELD_FAILURE_RATE",

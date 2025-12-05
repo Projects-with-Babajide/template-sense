@@ -26,6 +26,7 @@ class MockProvider(BaseAIProvider):
         super().__init__(config)
         self.classify_response = '{"headers": []}'
         self.translate_response = "translated text"
+        self.generate_response = "generated text"
 
     @property
     def provider_name(self) -> str:
@@ -40,6 +41,16 @@ class MockProvider(BaseAIProvider):
 
     def _call_translate_api(self, system_message: str, user_message: str) -> str:
         return self.translate_response
+
+    def _call_generate_api(
+        self,
+        prompt: str,
+        system_message: str | None,
+        max_tokens: int,
+        temperature: float,
+        json_mode: bool,
+    ) -> str:
+        return self.generate_response
 
 
 @pytest.fixture
@@ -350,3 +361,58 @@ class TestInheritance:
     def test_model_property(self, mock_provider):
         """Test model property."""
         assert mock_provider.model == "mock-model"
+
+
+class TestGenerateText:
+    """Tests for generate_text template method."""
+
+    def test_generate_text_success(self, mock_provider):
+        """Test successful text generation."""
+        mock_provider.generate_response = "Generated response text"
+
+        result = mock_provider.generate_text(
+            prompt="Test prompt",
+            system_message="Test system message",
+            max_tokens=150,
+            temperature=0.0,
+            json_mode=True,
+        )
+
+        assert result == "Generated response text"
+
+    def test_generate_text_with_defaults(self, mock_provider):
+        """Test text generation with default parameters."""
+        mock_provider.generate_response = "Default response"
+
+        result = mock_provider.generate_text(prompt="Test prompt")
+
+        assert result == "Default response"
+
+    def test_generate_text_empty_prompt(self, mock_provider):
+        """Test that empty prompt raises ValueError."""
+        with pytest.raises(ValueError, match="Prompt cannot be empty"):
+            mock_provider.generate_text(prompt="")
+
+    def test_generate_text_whitespace_prompt(self, mock_provider):
+        """Test that whitespace-only prompt raises ValueError."""
+        with pytest.raises(ValueError, match="Prompt cannot be empty"):
+            mock_provider.generate_text(prompt="   ")
+
+    def test_generate_text_empty_response(self, mock_provider):
+        """Test that empty response raises AIProviderError."""
+        mock_provider.generate_response = ""
+
+        with pytest.raises(AIProviderError, match="Empty response from API"):
+            mock_provider.generate_text(prompt="Test prompt")
+
+    def test_generate_text_api_error(self, mock_provider):
+        """Test that API errors are wrapped in AIProviderError."""
+
+        # Override _call_generate_api to raise an exception
+        def raise_error(*args, **kwargs):
+            raise Exception("API error occurred")
+
+        mock_provider._call_generate_api = raise_error
+
+        with pytest.raises(AIProviderError, match="Unexpected error"):
+            mock_provider.generate_text(prompt="Test prompt")

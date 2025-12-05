@@ -133,5 +133,57 @@ class AnthropicProvider(BaseAIProvider):
         content = response.content[0].text
         return content or ""
 
+    def _call_generate_api(
+        self,
+        prompt: str,
+        system_message: str | None,
+        max_tokens: int,
+        temperature: float,
+        json_mode: bool,
+    ) -> str:
+        """
+        Execute Anthropic API call for text generation.
+
+        Args:
+            prompt: User prompt/question
+            system_message: Optional system instruction
+            max_tokens: Maximum tokens in response
+            temperature: Sampling temperature (0.0-1.0)
+            json_mode: Whether to request JSON-formatted response
+
+        Returns:
+            Generated text from Anthropic API
+
+        Raises:
+            Anthropic API exceptions (will be wrapped by BaseAIProvider)
+        """
+        # Anthropic doesn't have native JSON mode - add to system message
+        final_system_message = system_message or ""
+
+        if json_mode and final_system_message:
+            final_system_message += " Respond with valid JSON only."
+        elif json_mode:
+            final_system_message = "Respond with valid JSON only."
+
+        # Build request parameters
+        request_params = {
+            "model": self.model,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+
+        # Add system message if present
+        if final_system_message:
+            request_params["system"] = final_system_message
+
+        response = self.client.messages.create(**request_params)
+
+        if not response.content:
+            return ""
+
+        content = response.content[0].text
+        return content or ""
+
 
 __all__ = ["AnthropicProvider"]

@@ -34,6 +34,8 @@ from dataclasses import dataclass
 from template_sense.ai_providers.interface import AIProvider
 from template_sense.constants import (
     SEMANTIC_MATCHING_CONFIDENCE_THRESHOLD,
+    SEMANTIC_MATCHING_MAX_TOKENS,
+    SEMANTIC_MATCHING_TEMPERATURE,
     SEMANTIC_MATCHING_TIMEOUT_SECONDS,
 )
 from template_sense.errors import AIProviderError
@@ -196,41 +198,18 @@ def semantic_match_field(
             best_fuzzy_score=best_fuzzy_score,
         )
 
-        # Call AI provider directly using the client
-        # We need raw text response, so we bypass classify_fields() and call the API directly
-        try:
-            # Get the underlying client and call it directly
-            if hasattr(ai_provider, "client"):
-                # OpenAI or Anthropic provider
-                if ai_provider.provider_name == "openai":
-                    response = ai_provider.client.chat.completions.create(
-                        model=ai_provider.model,
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": "You are a field mapping expert. Return only valid JSON.",
-                            },
-                            {"role": "user", "content": prompt},
-                        ],
-                        response_format={"type": "json_object"},
-                        temperature=0.0,
-                        max_tokens=150,
-                    )
-                    response_text = response.choices[0].message.content
-                elif ai_provider.provider_name == "anthropic":
-                    response = ai_provider.client.messages.create(
-                        model=ai_provider.model,
-                        messages=[{"role": "user", "content": prompt}],
-                        temperature=0.0,
-                        max_tokens=150,
-                    )
-                    response_text = response.content[0].text
-                else:
-                    raise ValueError(f"Unsupported AI provider: {ai_provider.provider_name}")
-            else:
-                raise ValueError("AI provider missing client attribute")
+        # Call AI provider using the provider-agnostic interface
+        system_msg = "You are a field mapping expert. Return only valid JSON."
 
-        except Exception as api_error:
+        try:
+            response_text = ai_provider.generate_text(
+                prompt=prompt,
+                system_message=system_msg,
+                max_tokens=SEMANTIC_MATCHING_MAX_TOKENS,
+                temperature=SEMANTIC_MATCHING_TEMPERATURE,
+                json_mode=True,
+            )
+        except AIProviderError as api_error:
             logger.error(
                 "Failed to call AI provider for semantic matching: %s",
                 str(api_error),
