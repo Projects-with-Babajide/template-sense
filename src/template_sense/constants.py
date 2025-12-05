@@ -79,7 +79,7 @@ TRANSLATION_TIMEOUT_SECONDS = 30  # Timeout for translation requests
 # ============================================================
 
 # AI Semantic Matching Configuration
-ENABLE_AI_SEMANTIC_MATCHING = False  # Feature flag for AI-powered semantic field matching
+ENABLE_AI_SEMANTIC_MATCHING = True  # Feature flag for AI-powered semantic field matching
 SEMANTIC_MATCHING_CONFIDENCE_THRESHOLD = (
     0.7  # Minimum AI confidence to accept semantic match (0.0-1.0)
 )
