@@ -16,6 +16,40 @@ from template_sense.recovery.error_recovery import RecoveryEvent, RecoverySeveri
 logger = logging.getLogger(__name__)
 
 
+def get_translated_labels(
+    items: list,
+    translation_map: dict[str, TranslatedLabel],
+    label_attr: str = "raw_label",
+) -> list[TranslatedLabel]:
+    """
+    Get translated labels with fallback for missing translations.
+
+    Args:
+        items: List of classified items (headers or columns)
+        translation_map: Map of original text to TranslatedLabel
+        label_attr: Attribute name to extract from items (default: "raw_label")
+
+    Returns:
+        List of TranslatedLabel objects with fallback for missing translations
+    """
+    result = []
+    for item in items:
+        label = getattr(item, label_attr)
+        if not label:
+            continue
+
+        translated = translation_map.get(
+            label,
+            TranslatedLabel(
+                original_text=label,
+                translated_text=label,
+                target_language=DEFAULT_TARGET_LANGUAGE,
+            ),
+        )
+        result.append(translated)
+    return result
+
+
 class FuzzyMatchingStage(PipelineStage):
     """
     Stage 8: Fuzzy matching.
@@ -35,18 +69,9 @@ class FuzzyMatchingStage(PipelineStage):
             return context
 
         # Match header fields
-        header_translated_labels = [
-            context.translation_map.get(
-                header.raw_label,
-                TranslatedLabel(
-                    original_text=header.raw_label or "",
-                    translated_text=header.raw_label or "",
-                    target_language=DEFAULT_TARGET_LANGUAGE,
-                ),
-            )
-            for header in context.classified_headers
-            if header.raw_label
-        ]
+        header_translated_labels = get_translated_labels(
+            items=context.classified_headers, translation_map=context.translation_map
+        )
 
         if header_translated_labels:
             try:
@@ -73,18 +98,9 @@ class FuzzyMatchingStage(PipelineStage):
                 )
 
         # Match column fields
-        column_translated_labels = [
-            context.translation_map.get(
-                column.raw_label,
-                TranslatedLabel(
-                    original_text=column.raw_label or "",
-                    translated_text=column.raw_label or "",
-                    target_language=DEFAULT_TARGET_LANGUAGE,
-                ),
-            )
-            for column in context.classified_columns
-            if column.raw_label
-        ]
+        column_translated_labels = get_translated_labels(
+            items=context.classified_columns, translation_map=context.translation_map
+        )
 
         if column_translated_labels:
             try:
