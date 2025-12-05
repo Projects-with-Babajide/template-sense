@@ -35,13 +35,18 @@ class ValidationStage(PipelineStage):
         # Validate file path
         self._validate_file_path(context.file_path)
 
-        # Validate field dictionary
-        self._validate_field_dictionary(context.field_dictionary)
+        # Validate field dictionary and transform to internal format
+        header_dict, column_dict = self._validate_field_dictionary(context.field_dictionary)
+
+        # Populate internal dictionaries in context
+        context.header_field_dictionary = header_dict
+        context.column_field_dictionary = column_dict
 
         logger.debug(
-            "Input validation passed: file=%s, field_dict_keys=%d",
+            "Input validation passed: file=%s, headers=%d, columns=%d",
             context.file_path,
-            len(context.field_dictionary),
+            len(header_dict),
+            len(column_dict),
         )
         logger.info("Stage 1: Validation complete")
 
@@ -72,55 +77,92 @@ class ValidationStage(PipelineStage):
                 file_path=str(file_path),
             )
 
-    def _validate_field_dictionary(self, field_dictionary: dict[str, list[str]]) -> None:
+    def _validate_field_dictionary(
+        self, field_dictionary: dict[str, dict[str, str]]
+    ) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
         """
-        Validate field dictionary structure.
+        Validate structured field dictionary and transform to internal format.
 
         Args:
-            field_dictionary: Dictionary to validate
+            field_dictionary: Structured dict with 'headers' and 'columns' sections
+
+        Returns:
+            Tuple of (header_dict, column_dict) in dict[str, list[str]] format
 
         Raises:
             InvalidFieldDictionaryError: If dictionary is malformed
         """
-        # Check type
+        # 1. Type check
         if not isinstance(field_dictionary, dict):
             raise InvalidFieldDictionaryError(
-                reason="Field dictionary must be a dict[str, list[str]]",
+                reason="Field dictionary must be a dict",
                 field_dictionary=field_dictionary,
             )
 
-        # Check not empty
-        if not field_dictionary:
+        # 2. Check for required keys
+        if "headers" not in field_dictionary:
             raise InvalidFieldDictionaryError(
-                reason="Field dictionary cannot be empty",
+                reason="Field dictionary must contain 'headers' key",
+                field_dictionary=field_dictionary,
+            )
+        if "columns" not in field_dictionary:
+            raise InvalidFieldDictionaryError(
+                reason="Field dictionary must contain 'columns' key",
                 field_dictionary=field_dictionary,
             )
 
-        # Validate all keys are strings and all values are non-empty lists of strings
-        for key, variants in field_dictionary.items():
+        # 3. Validate headers section
+        headers = field_dictionary["headers"]
+        if not isinstance(headers, dict):
+            raise InvalidFieldDictionaryError(
+                reason="'headers' must be a dict[str, str]",
+                field_dictionary=field_dictionary,
+            )
+
+        for key, value in headers.items():
             if not isinstance(key, str):
                 raise InvalidFieldDictionaryError(
-                    reason=f"Field dictionary key must be string, got {type(key)}",
+                    reason=f"Header key must be string, got {type(key).__name__}",
+                    field_dictionary=field_dictionary,
+                )
+            if not isinstance(value, str):
+                raise InvalidFieldDictionaryError(
+                    reason=f"Header value for '{key}' must be string, got {type(value).__name__}",
                     field_dictionary=field_dictionary,
                 )
 
-            if not isinstance(variants, list):
+        # 4. Validate columns section
+        columns = field_dictionary["columns"]
+        if not isinstance(columns, dict):
+            raise InvalidFieldDictionaryError(
+                reason="'columns' must be a dict[str, str]",
+                field_dictionary=field_dictionary,
+            )
+
+        for key, value in columns.items():
+            if not isinstance(key, str):
                 raise InvalidFieldDictionaryError(
-                    reason=f"Field dictionary value for key '{key}' must be list, got {type(variants)}",
+                    reason=f"Column key must be string, got {type(key).__name__}",
+                    field_dictionary=field_dictionary,
+                )
+            if not isinstance(value, str):
+                raise InvalidFieldDictionaryError(
+                    reason=f"Column value for '{key}' must be string, got {type(value).__name__}",
                     field_dictionary=field_dictionary,
                 )
 
-            if not variants:
-                raise InvalidFieldDictionaryError(
-                    reason=f"Field dictionary value for key '{key}' cannot be empty list",
-                    field_dictionary=field_dictionary,
-                )
+        # 5. Transform to internal format: dict[str, list[str]]
+        # Wrap single string values in lists for compatibility with fuzzy matching
+        header_dict = {k: [v] for k, v in headers.items()}
+        column_dict = {k: [v] for k, v in columns.items()}
 
-            if not all(isinstance(v, str) for v in variants):
-                raise InvalidFieldDictionaryError(
-                    reason=f"Field dictionary value for key '{key}' must be list of strings",
-                    field_dictionary=field_dictionary,
-                )
+        logger.debug(
+            "Field dictionary validated: %d headers, %d columns (empty sections allowed)",
+            len(header_dict),
+            len(column_dict),
+        )
+
+        return header_dict, column_dict
 
 
 __all__ = ["ValidationStage"]

@@ -77,7 +77,7 @@ class FuzzyMatchingStage(PipelineStage):
             try:
                 context.header_match_results = match_fields(
                     translated_labels=header_translated_labels,
-                    field_dictionary=context.field_dictionary,
+                    field_dictionary=context.header_field_dictionary,
                     threshold=DEFAULT_AUTO_MAPPING_THRESHOLD,
                     ai_provider=context.ai_provider,  # Pass AI provider for semantic matching
                 )
@@ -106,7 +106,7 @@ class FuzzyMatchingStage(PipelineStage):
             try:
                 context.column_match_results = match_fields(
                     translated_labels=column_translated_labels,
-                    field_dictionary=context.field_dictionary,
+                    field_dictionary=context.column_field_dictionary,
                     threshold=DEFAULT_AUTO_MAPPING_THRESHOLD,
                     ai_provider=context.ai_provider,  # Pass AI provider for semantic matching
                 )

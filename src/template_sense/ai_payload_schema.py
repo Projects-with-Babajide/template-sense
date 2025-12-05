@@ -219,7 +219,7 @@ class AIPayload:
         sheet_name: Name of the Excel sheet being analyzed
         header_candidates: List of detected header fields (key-value pairs)
         table_candidates: List of detected tables with headers and sample data
-        field_dictionary: Tako's canonical field mapping (key -> multilingual aliases)
+        field_dictionary: Structured canonical field mapping with 'headers' and 'columns' sections
 
     Example:
         >>> payload = AIPayload(
@@ -227,8 +227,12 @@ class AIPayload:
         ...     header_candidates=[...],
         ...     table_candidates=[...],
         ...     field_dictionary={
-        ...         "invoice_number": ["Invoice number", "請求書番号"],
-        ...         "box_name": ["Box name", "箱名"],
+        ...         "headers": {
+        ...             "invoice_number": ["Invoice number", "請求書番号"],
+        ...         },
+        ...         "columns": {
+        ...             "box_name": ["Box name", "箱名"],
+        ...         }
         ...     }
         ... )
     """
@@ -236,7 +240,7 @@ class AIPayload:
     sheet_name: str
     header_candidates: list[AIHeaderCandidate]
     table_candidates: list[AITableCandidate]
-    field_dictionary: dict[str, list[str]]
+    field_dictionary: dict[str, dict[str, list[str]]]
 
 
 def _extract_adjacent_cells(
@@ -524,7 +528,7 @@ def _extract_sample_data_rows(
 
 def build_ai_payload(
     sheet_summary: dict[str, Any],
-    field_dictionary: dict[str, list[str]],
+    field_dictionary: dict[str, dict[str, list[str]]],
     grid: list[list[Any]] | None = None,
     max_sample_rows: int = DEFAULT_AI_SAMPLE_ROWS,
     adjacent_cell_radius: int = DEFAULT_ADJACENT_CELL_RADIUS,
@@ -538,7 +542,7 @@ def build_ai_payload(
 
     Args:
         sheet_summary: Output from build_sheet_summary() containing header and table blocks
-        field_dictionary: Tako's canonical field mapping (key -> multilingual aliases)
+        field_dictionary: Structured canonical field mapping with 'headers' and 'columns' sections
         grid: Optional 2D grid of cell values for adjacent cell context extraction
         max_sample_rows: Maximum number of sample data rows to include per table (default: 5)
         adjacent_cell_radius: Number of adjacent cells to extract in each direction (default: 3)
@@ -553,8 +557,12 @@ def build_ai_payload(
         >>> from template_sense.extraction.summary_builder import build_sheet_summary
         >>> summary = build_sheet_summary(workbook, sheet_name="Sheet1")
         >>> field_dict = {
-        ...     "invoice_number": ["Invoice number", "請求書番号"],
-        ...     "box_name": ["Box name", "箱名"],
+        ...     "headers": {
+        ...         "invoice_number": ["Invoice number", "請求書番号"],
+        ...     },
+        ...     "columns": {
+        ...         "box_name": ["Box name", "箱名"],
+        ...     }
         ... }
         >>> payload = build_ai_payload(summary, field_dict)
         >>> payload["sheet_name"]
