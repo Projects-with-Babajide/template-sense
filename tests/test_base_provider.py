@@ -9,6 +9,7 @@ provider implementation. It verifies:
 - Error handling and exception mapping
 """
 
+import datetime
 import json
 from unittest.mock import Mock
 
@@ -140,6 +141,26 @@ class TestPromptBuilding:
         prompt = mock_provider._build_user_prompt(payload, "line_items")
         assert "invoice table line items" in prompt
         assert json.dumps(payload, indent=2) in prompt
+
+    def test_build_user_prompt_with_datetime_objects(self, mock_provider):
+        """Test user prompt with datetime objects in payload."""
+        payload = {
+            "header_fields": [
+                {"label": "Invoice Date", "value": datetime.date(2024, 5, 8)},
+                {
+                    "label": "Due Date",
+                    "value": datetime.datetime(2024, 6, 8, 10, 30, 0),
+                },
+                {"label": "Time", "value": datetime.time(14, 30, 0)},
+            ]
+        }
+        # Should not raise TypeError
+        prompt = mock_provider._build_user_prompt(payload, "headers")
+        # Verify ISO 8601 format in output
+        assert "2024-05-08" in prompt
+        assert "2024-06-08T10:30:00" in prompt
+        assert "14:30:00" in prompt
+        assert "invoice template header fields" in prompt
 
 
 class TestExpectedResponseKey:
