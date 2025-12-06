@@ -26,6 +26,7 @@ class MockProvider(BaseAIProvider):
     def __init__(self, config: AIConfig):
         super().__init__(config)
         self.classify_response = '{"headers": []}'
+        self.batch_classify_response = '{"headers": [], "columns": [], "line_items": []}'
         self.translate_response = "translated text"
         self.generate_response = "generated text"
 
@@ -39,6 +40,9 @@ class MockProvider(BaseAIProvider):
 
     def _call_classify_api(self, system_message: str, user_message: str) -> str:
         return self.classify_response
+
+    def _call_batch_classify_api(self, system_message: str, user_message: str) -> str:
+        return self.batch_classify_response
 
     def _call_translate_api(self, system_message: str, user_message: str) -> str:
         return self.translate_response

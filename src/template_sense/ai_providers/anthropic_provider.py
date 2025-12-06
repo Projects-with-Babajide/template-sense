@@ -105,6 +105,34 @@ class AnthropicProvider(BaseAIProvider):
         content = response.content[0].text
         return content or ""
 
+    def _call_batch_classify_api(self, system_message: str, user_message: str) -> str:
+        """
+        Execute Anthropic API call for batch classification.
+
+        Args:
+            system_message: System prompt for batch classification
+            user_message: User prompt with payload data
+
+        Returns:
+            Raw response text from Anthropic API
+
+        Raises:
+            Anthropic API exceptions (will be wrapped by BaseAIProvider)
+        """
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=ANTHROPIC_CLASSIFICATION_MAX_TOKENS,
+            temperature=AI_CLASSIFICATION_TEMPERATURE,
+            system=system_message,
+            messages=[{"role": "user", "content": user_message}],
+        )
+
+        if not response.content:
+            return ""
+
+        content = response.content[0].text
+        return content or ""
+
     def _call_translate_api(self, system_message: str, user_message: str) -> str:
         """
         Execute Anthropic API call for translation.

@@ -148,8 +148,15 @@ class TestAIProviderInterface:
             def model(self) -> str:
                 return self.config.model or "default-model"
 
-            def classify_fields(self, payload: dict[str, Any]) -> dict[str, Any]:
+            def classify_fields(
+                self, payload: dict[str, Any], context: str = "headers"
+            ) -> dict[str, Any]:
                 return {"result": "classified"}
+
+            def classify_all_fields(
+                self, payload: dict[str, Any], contexts: list[str] = None
+            ) -> dict[str, Any]:
+                return {"headers": [], "columns": [], "line_items": []}
 
             def translate_text(self, text: str, source_lang: str, target_lang: str = "en") -> str:
                 return f"translated:{text}"
@@ -183,10 +190,17 @@ class TestAIProviderInterface:
             def model(self) -> str:
                 return "mock-model"
 
-            def classify_fields(self, payload: dict[str, Any]) -> dict[str, Any]:
+            def classify_fields(
+                self, payload: dict[str, Any], context: str = "headers"
+            ) -> dict[str, Any]:
                 return {
                     "classifications": [{"field": "Invoice No", "canonical_key": "invoice_number"}]
                 }
+
+            def classify_all_fields(
+                self, payload: dict[str, Any], contexts: list[str] = None
+            ) -> dict[str, Any]:
+                return {"headers": [], "columns": [], "line_items": []}
 
             def translate_text(self, text: str, source_lang: str, target_lang: str = "en") -> str:
                 return text
@@ -221,8 +235,15 @@ class TestAIProviderInterface:
             def model(self) -> str:
                 return "mock-model"
 
-            def classify_fields(self, payload: dict[str, Any]) -> dict[str, Any]:
+            def classify_fields(
+                self, payload: dict[str, Any], context: str = "headers"
+            ) -> dict[str, Any]:
                 return {}
+
+            def classify_all_fields(
+                self, payload: dict[str, Any], contexts: list[str] = None
+            ) -> dict[str, Any]:
+                return {"headers": [], "columns": [], "line_items": []}
 
             def translate_text(self, text: str, source_lang: str, target_lang: str = "en") -> str:
                 if source_lang == "ja" and target_lang == "en":
@@ -258,8 +279,15 @@ class TestAIProviderInterface:
             def model(self) -> str:
                 return "mock-model"
 
-            def classify_fields(self, payload: dict[str, Any]) -> dict[str, Any]:
+            def classify_fields(
+                self, payload: dict[str, Any], context: str = "headers"
+            ) -> dict[str, Any]:
                 return {}
+
+            def classify_all_fields(
+                self, payload: dict[str, Any], contexts: list[str] = None
+            ) -> dict[str, Any]:
+                return {"headers": [], "columns": [], "line_items": []}
 
             def translate_text(self, text: str, source_lang: str, target_lang: str = "en") -> str:
                 return text
