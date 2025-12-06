@@ -1,0 +1,387 @@
+================================================================================
+TEMPLATE SENSE HEADER EXTRACTION ANALYSIS - IMPLEMENTATION SUMMARY
+================================================================================
+
+PROJECT: Template Sense (Tako AI Enablement)
+TICKET: BAT-76 - Add multi-cell label/value pairing detection
+DATE: 2025-12-06
+
+================================================================================
+1. KEY FINDINGS
+================================================================================
+
+1.1 CURRENT IMPLEMENTATION STATUS
+   - Header detection is TWO-PHASE:
+     a) Heuristic detection (header_candidates.py)
+     b) AI classification (header_classification.py)
+
+   - Same-cell pairing is ALREADY implemented
+     Location: _extract_label_value_from_cell() in header_candidates.py
+     Pattern: Splits on ":" (e.g., "Invoice: 12345" → ("Invoice", "12345"))
+
+   - Multi-cell pairing is NOT implemented in heuristics
+     BUT the downstream AI layer is ALREADY READY to parse it!
+     ClassifiedHeaderField has label_col_offset, value_col_offset, pattern_type
+     These are defined but not populated by heuristics (yet)
+
+1.2 CRITICAL CONSTANT
+   - DEFAULT_ADJACENT_CELL_RADIUS = 3 (constants.py, line 38)
+   - Used downstream for AI context extraction
+   - Suggests typical multi-cell offsets are within 3 cells
+
+1.3 DATA FLOW READINESS
+   - Grid data is available at all layers (0-based access)
+   - Cell coordinates are 1-based (Excel convention) in data structures
+   - Adjacent cell extraction already working in ai_payload_schema.py
+   - AI providers expect and parse multi-cell metadata (base_provider.py:413-447)
+
+================================================================================
+2. CORE DATA STRUCTURES
+================================================================================
+
+HeaderCandidateBlock (header_candidates.py:103-132)
+├─ row_start, row_end, col_start, col_end : Block boundaries (1-based)
+├─ content : List[(row, col, value)] - All non-empty cells
+├─ label_value_pairs : List[(label, value, row, col)] - NEEDS ENHANCEMENT
+├─ score : float (0.0-1.0) - Heuristic confidence
+└─ detected_pattern : str - Detection method
+
+ClassifiedHeaderField (header_classification.py:25-61)
+├─ raw_label, raw_value : From heuristics or AI
+├─ row_index, col_index : Where pair was found
+├─ label_col_offset : NEW (BAT-53) - Offset to label cell
+├─ value_col_offset : NEW (BAT-53) - Offset to value cell
+├─ pattern_type : NEW (BAT-53) - "same_cell", "multi_cell", or None
+└─ model_confidence : AI-provided confidence score
+
+================================================================================
+3. CURRENT LABEL/VALUE EXTRACTION LOGIC
+================================================================================
+
+Function: _extract_label_value_from_cell() (header_candidates.py:216-250)
+
+Current Behavior:
+  Input: Single cell value (any type)
+  Output: (label, value) tuple
+
+  Logic:
+  1. If cell is not a string → return (None, cell_value)
+  2. If cell contains ":" → split on first ":"
+     - Left side = label, Right side = value
+  3. Otherwise → return (None, cell_value)
+
+Limitations:
+  - Only works for SAME-CELL patterns
+  - Uses fixed ":" delimiter (no other delimiters)
+  - Does NOT look at adjacent cells
+  - Does NOT detect when label/value are in different cells
+
+Example:
+  Input cell: "Invoice Number: 12345"
+  Output: ("Invoice Number", "12345")
+
+  Input cell: "12345"
+  Output: (None, "12345")
+
+  Input cell: "Invoice" (in col 1), value in col 2 (NOT DETECTED!)
+  Output: (None, "Invoice")
+
+================================================================================
+4. DOWNSTREAM CONSUMPTION POINTS
+================================================================================
+
+4.1 Summary Builder (summary_builder.py:166-284)
+    - normalize_header_blocks() converts HeaderCandidateBlock to JSON
+    - Output: {"label_value_pairs": [{"label": ..., "value": ..., "row": ..., "col": ...}]}
+    - PRESERVES existing structure for backward compatibility
+
+4.2 AI Payload Schema (ai_payload_schema.py)
+    - _convert_header_candidates() → AIHeaderCandidate[]
+    - _extract_adjacent_cells() extracts context for AI (already working!)
+    - AIPayload includes adjacent_cells dict:
+      {
+        "left_1": value_or_none,
+        "left_2": value_or_none,
+        "right_1": value_or_none,
+        "right_2": value_or_none,
+        "above_1": value_or_none,
+        "below_1": value_or_none
+      }
+
+4.3 AI Classification (header_classification.py:63-114)
+    - classify_header_fields() parses AI response
+    - _parse_header_field() extracts all fields including:
+      * label_col_offset (new in BAT-53)
+      * value_col_offset (new in BAT-53)
+      * pattern_type (new in BAT-53)
+    - ALL VALIDATION ALREADY IN PLACE! (lines 180-198)
+
+4.4 AI Provider Prompt (base_provider.py:413-447)
+    - System prompt instructs AI to detect:
+      1. Multi-cell patterns (label in one cell, value in adjacent)
+      2. Same-cell patterns (both in one cell with delimiter)
+    - Expected response includes offsets and pattern_type
+    - READY TO GO - just needs heuristic input!
+
+================================================================================
+5. INTEGRATION POINTS FOR BAT-76 IMPLEMENTATION
+================================================================================
+
+5.1 PRIMARY LOCATION: header_candidates.py
+
+    New function needed: _detect_multi_cell_pairs()
+
+    Signature:
+      def _detect_multi_cell_pairs(
+          grid: list[list[Any]],
+          block: HeaderCandidateBlock,
+          max_offset: int = DEFAULT_ADJACENT_CELL_RADIUS
+      ) -> list[tuple[str | None, Any, int, int]]
+
+    Returns: List[(label, value, row, col)] like existing pairs
+
+    Integration point: _create_block_from_cluster() around line 508
+
+    Current code (lines 508-511):
+      label_value_pairs = []
+      for row_idx, col_idx, cell in content:
+          label, value = _extract_label_value_from_cell(cell)
+          label_value_pairs.append((label, value, row_idx, col_idx))
+
+    Enhanced code (proposed):
+      label_value_pairs = []
+      # Phase 1: Same-cell (existing)
+      for row_idx, col_idx, cell in content:
+          label, value = _extract_label_value_from_cell(cell)
+          label_value_pairs.append((label, value, row_idx, col_idx))
+
+      # Phase 2: Multi-cell (NEW - BAT-76)
+      if should_detect_multi_cell(block):
+          multi_pairs = _detect_multi_cell_pairs(grid, block)
+          label_value_pairs.extend(multi_pairs)
+
+5.2 OFFSET CALCULATION LOGIC
+
+    Basic principle:
+    - Main cell at (row_main, col_main)
+    - Label found at (row_label, col_label)
+    - Value found at (row_value, col_value)
+    - label_col_offset = col_label - col_main
+    - value_col_offset = col_value - col_main
+
+    Examples:
+    - Same cell: label_col_offset=0, value_col_offset=0
+    - Label left, value right: label_col_offset=-1, value_col_offset=1
+    - Both right: label_col_offset=1, value_col_offset=2
+
+5.3 BACKWARD COMPATIBILITY
+
+    - label_value_pairs tuple structure UNCHANGED
+    - Same 4-tuple format: (label, value, row, col)
+    - Offset info added by AI layer, not heuristics
+    - No breaking changes to existing code
+
+================================================================================
+6. EDGE CASES TO HANDLE
+================================================================================
+
+CRITICAL CASES:
+
+6.1 Multi-row Headers (CHALLENGING)
+    - Label in row 1, value in row 2
+    - Current offset logic: horizontal (column) only
+    - May need separate handling or row offset support
+    - NOT in current ticket scope likely
+
+6.2 Non-contiguous Pairing (MODERATE)
+    - "Invoice:" in col 1, value in col 5+
+    - DEFAULT_ADJACENT_CELL_RADIUS = 3 may not be enough
+    - Consider increasing radius or using content hints
+
+6.3 Multiple Values per Label (CHALLENGING)
+    - Label "Invoice Number:" but value is "INV", "-", "12345"
+    - Requires concatenation logic
+    - Likely requires AI intelligence
+
+6.4 Ambiguous Pairing (MODERATE)
+    - Two labels and two values with unclear mapping
+    - Spatial reasoning needed (proximity matching)
+    - Adjacent cell context helps AI resolve
+
+6.5 Language Independence (GOOD NEWS)
+    - Japanese "請求書番号:" with numeric value
+    - Offsets are language-agnostic
+    - Works for any language
+
+6.6 Dense Header Blocks (MODERATE)
+    - All cells filled (10+ rows, 10 columns)
+    - May produce too many candidates
+    - Could filter by keywords or patterns
+
+================================================================================
+7. TEST FILE REFERENCE
+================================================================================
+
+File: tests/fixtures/invoice_templates/CO.xlsx
+Type: Microsoft Excel 2007+ (XLSX)
+Purpose: Real invoice template for integration testing
+Usage: Test multi-cell pairing detection with real data
+Location (absolute): /Users/babajideokusanya/Documents/Projects-with-Babajide/codes/template-sense/tests/fixtures/invoice_templates/CO.xlsx
+
+================================================================================
+8. CONSTANTS REFERENCE
+================================================================================
+
+File: src/template_sense/constants.py
+
+Relevant Constants:
+- DEFAULT_ADJACENT_CELL_RADIUS = 3 (line 38)
+  → Suggests max useful offset is ~3 cells
+
+- DEFAULT_CONFIDENCE_THRESHOLD = 0.7 (line 26)
+  → Heuristic/AI confidence threshold
+
+- DEFAULT_MIN_TABLE_ROWS = 3 (line 23)
+  → For table exclusion approach in header detection
+
+================================================================================
+9. KEY FILES AND FUNCTIONS REFERENCE TABLE
+================================================================================
+
+FILE: header_candidates.py
+  Functions:
+    - detect_header_candidate_blocks(grid, min_score, max_gap, table_blocks)
+      → MAIN ENTRY POINT - orchestrates detection
+    - score_row_as_header_candidate(row, row_index)
+      → Scores likelihood of header
+    - find_header_candidate_rows(grid, min_score)
+      → Finds candidate rows by scoring
+    - cluster_header_candidate_blocks(grid, scored_rows, max_gap)
+      → Groups rows into blocks
+    - _create_block_from_cluster(grid, cluster)
+      → INTEGRATION POINT - builds HeaderCandidateBlock
+    - _extract_label_value_from_cell(cell_value)
+      → CURRENT EXTRACTION - same-cell patterns only
+
+  Classes:
+    - HeaderCandidateBlock
+      → Data structure for detected header blocks
+
+FILE: constants.py
+  - DEFAULT_ADJACENT_CELL_RADIUS = 3
+
+FILE: summary_builder.py
+  Functions:
+    - build_sheet_summary(workbook, sheet_name, min_score)
+      → Orchestrates full extraction pipeline
+    - normalize_header_blocks(blocks, min_score)
+      → Converts to JSON dicts
+
+  Purpose: Normalization layer between heuristics and AI
+
+FILE: ai_payload_schema.py
+  Functions:
+    - build_ai_payload(sheet_summary, field_dictionary, grid, max_sample_rows)
+      → Builds AI-ready payload
+    - _convert_header_candidates(header_blocks, grid, adjacent_cell_radius)
+      → Converts to AIHeaderCandidate
+    - _extract_adjacent_cells(grid, row, col, radius)
+      → CONTEXT EXTRACTION - already working!
+
+  Classes:
+    - AIHeaderCandidate
+      → Schema for AI consumption
+
+FILE: header_classification.py
+  Functions:
+    - classify_header_fields(ai_provider, payload)
+      → AI classification orchestrator
+    - _parse_header_field(header_dict, field_index)
+      → PARSES AI RESPONSE - includes offset validation
+
+  Classes:
+    - ClassifiedHeaderField
+      → Final output with semantic meaning
+
+FILE: base_provider.py
+  Functions:
+    - _build_system_prompt(context)
+      → Generates AI system prompt
+      → DOCUMENTS expected response format
+      → Includes pattern_type, label_col_offset, value_col_offset
+
+  Purpose: AI provider interface and prompt templates
+
+================================================================================
+10. IMPLEMENTATION ROADMAP
+================================================================================
+
+PHASE 1: Heuristic Detection (BAT-76 - THIS TICKET)
+  1. Create _detect_multi_cell_pairs() function
+     - Scan within block content
+     - Identify potential label-value adjacencies
+     - Calculate offsets
+     - Return list of pairs
+
+  2. Integrate into _create_block_from_cluster()
+     - Add multi-cell detection step
+     - Preserve existing same-cell pairs
+     - Combine both types in label_value_pairs
+
+  3. Unit Tests
+     - Test multi-cell detection with various layouts
+     - Test same-cell detection still works
+     - Test edge cases (ambiguous pairing, dense blocks, etc.)
+     - Test with CO.xlsx real template
+
+  4. Integration Testing
+     - Full pipeline through summary_builder
+     - Verify adjacent cells extracted correctly
+     - Check data structure preservation
+
+PHASE 2: AI Enhancement (ALREADY READY!)
+  - No changes needed in header_classification.py
+  - AI layer already expects and parses offsets
+  - Just ensure heuristics provide good context
+
+PHASE 3: Validation & Polish
+  - E2E testing through full pipeline
+  - Performance testing on large templates
+  - Documentation updates
+
+================================================================================
+11. SUMMARY & RECOMMENDATIONS
+================================================================================
+
+CURRENT STATE:
+  ✓ Header detection works well with heuristics
+  ✓ Same-cell label/value extraction works
+  ✗ Multi-cell patterns NOT detected
+  ✓ AI layer READY to receive multi-cell metadata
+  ✓ Downstream classification layer READY to parse offsets
+  ✓ All supporting infrastructure in place
+
+PROPOSED ENHANCEMENT (BAT-76):
+  - Add _detect_multi_cell_pairs() to header_candidates.py
+  - Detect adjacent-cell label/value patterns within blocks
+  - Calculate offset information for AI consumption
+  - Maintain 100% backward compatibility
+  - All changes localized to header detection
+
+INTEGRATION PATH:
+  1. Heuristics → HeaderCandidateBlock (with multi-cell pairs)
+  2. Summary Builder → normalize_header_blocks (JSON dicts)
+  3. AI Payload → AIHeaderCandidate (with adjacent context)
+  4. AI Provider → parse offsets and pattern_type
+  5. Classification → ClassifiedHeaderField (fully enriched)
+  6. Mapping → Use offsets for disambiguation
+
+CONFIDENCE LEVEL: HIGH
+  - All data structures in place
+  - All downstream processing ready
+  - Only missing heuristic detection logic
+  - Scope is well-defined and localized
+
+================================================================================
+END OF SUMMARY
+================================================================================
