@@ -248,8 +248,10 @@ def aggregate_recovery_events(events: list[RecoveryEvent]) -> dict[str, Any]:
     """
     Aggregate and summarize recovery events.
 
-    Creates a JSON-serializable summary of all recovery events, grouped by severity
-    and stage.
+    Creates a JSON-serializable summary of recovery events, grouped by severity
+    and stage. Only WARNING and ERROR severity events are included in the output
+    to avoid noise from INFO-level events (e.g., missing confidence scores for
+    every field).
 
     Args:
         events: List of RecoveryEvent objects to aggregate
@@ -258,17 +260,24 @@ def aggregate_recovery_events(events: list[RecoveryEvent]) -> dict[str, Any]:
         Dictionary with structure:
         {
             "total_events": int,
-            "by_severity": {"info": int, "warning": int, "error": int},
+            "by_severity": {"warning": int, "error": int},
             "by_stage": {"stage_name": int, ...},
             "events": [event.to_dict(), ...]
         }
     """
+    # Filter to only WARNING and ERROR events (exclude INFO to reduce noise)
+    critical_events = [
+        event
+        for event in events
+        if event.severity in (RecoverySeverity.WARNING, RecoverySeverity.ERROR)
+    ]
+
     # Initialize counters
-    by_severity = {"info": 0, "warning": 0, "error": 0}
+    by_severity = {"warning": 0, "error": 0}
     by_stage: dict[str, int] = {}
 
     # Count events by severity and stage
-    for event in events:
+    for event in critical_events:
         # Count by severity
         severity_key = event.severity.value
         by_severity[severity_key] += 1
@@ -279,8 +288,8 @@ def aggregate_recovery_events(events: list[RecoveryEvent]) -> dict[str, Any]:
 
     # Build summary
     return {
-        "total_events": len(events),
+        "total_events": len(critical_events),
         "by_severity": by_severity,
         "by_stage": by_stage,
-        "events": [event.to_dict() for event in events],
+        "events": [event.to_dict() for event in critical_events],
     }
