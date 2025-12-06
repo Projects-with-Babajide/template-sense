@@ -212,7 +212,7 @@ TEMPLATE_SENSE_LOG_LEVEL=INFO      # DEBUG, INFO, WARNING, ERROR
 ### API Security Patterns
 - Validate file paths (no directory traversal)
 - Generic errors to external callers
-- Timeouts: 30 seconds per AI request (default)
+- Timeouts: 120 seconds per AI request (default, increased for batch classification)
 
 ---
 

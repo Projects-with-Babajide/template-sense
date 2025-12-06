@@ -79,7 +79,7 @@ class TestExtractionConstants:
 
     def test_default_ai_timeout_seconds(self):
         """Test DEFAULT_AI_TIMEOUT_SECONDS has expected value and type."""
-        assert DEFAULT_AI_TIMEOUT_SECONDS == 30
+        assert DEFAULT_AI_TIMEOUT_SECONDS == 120
         assert isinstance(DEFAULT_AI_TIMEOUT_SECONDS, int)
 
     def test_min_grid_constraints(self):

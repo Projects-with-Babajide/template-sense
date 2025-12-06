@@ -31,7 +31,7 @@ DEFAULT_TABLE_MIN_SCORE = 0.5  # Minimum score for table candidate rows (0.0-1.0
 DEFAULT_TABLE_HEADER_MIN_SCORE = 0.6  # Minimum score for table header row detection (0.0-1.0)
 
 # AI timeouts
-DEFAULT_AI_TIMEOUT_SECONDS = 30  # Timeout per AI request
+DEFAULT_AI_TIMEOUT_SECONDS = 120  # Timeout per AI request (increased for batch classification)
 
 # AI payload configuration
 DEFAULT_AI_SAMPLE_ROWS = 5  # Number of sample data rows to include in AI payload
