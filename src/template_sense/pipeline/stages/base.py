@@ -110,9 +110,14 @@ class PipelineContext:
         Returns:
             Dictionary with normalized_output, recovery_events, and metadata
         """
+        from template_sense.recovery import aggregate_recovery_events
+
+        # Use aggregate_recovery_events to filter INFO-level events
+        aggregated = aggregate_recovery_events(self.recovery_events)
+
         return {
             "normalized_output": self.normalized_output,
-            "recovery_events": [event.to_dict() for event in self.recovery_events],
+            "recovery_events": aggregated["events"],  # Only WARNING and ERROR events
             "metadata": self.metadata,
         }
 
