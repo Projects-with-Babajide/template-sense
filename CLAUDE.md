@@ -247,9 +247,30 @@ pytest
 - **Pytest:** `pytest`
 
 ### Git Workflow
-- Main branch: `main`
-- Feature branches: **MUST use the branch name from Linear ticket**
-- Commit messages: Follow conventional commits format
+
+**IMPORTANT BRANCH RULES:**
+- **NEVER commit directly to `main`** - Always work on a feature branch
+- **NEVER push directly to `main`** - All changes must go through Pull Requests
+
+**Branch Creation:**
+1. If working on a Linear ticket (e.g., BAT-74):
+   - Use the ticket branch format: `jideokus/bat-74-short-description`
+   - Example: `jideokus/bat-74-optimize-api-calls`
+2. If NOT working on a ticket:
+   - Create a descriptive feature branch: `jideokus/feature-name`
+   - Example: `jideokus/update-timeout-config`
+
+**Workflow Steps:**
+1. Always start from `main`: `git checkout main && git pull origin main`
+2. Create feature branch: `git checkout -b jideokus/bat-XX-description`
+3. Make changes and commit with conventional commit format
+4. Push branch: `git push -u origin jideokus/bat-XX-description`
+5. Create Pull Request to `main` (never merge directly)
+
+**Commit Message Format:**
+- Follow conventional commits: `type: description`
+- Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
+- Example: `feat: increase AI timeout to 120 seconds (BAT-74)`
 
 ---
 
