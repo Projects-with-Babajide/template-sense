@@ -43,6 +43,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from template_sense.constants import DEFAULT_ADJACENT_CELL_RADIUS
 from template_sense.extraction.table_candidates import TableCandidateBlock
 
 # Set up module logger
@@ -213,6 +214,126 @@ def _is_substantial_text(text: str) -> bool:
     return bool(re.search(r"[a-zA-Z\u3000-\u9fff]", text_stripped))
 
 
+def _is_label_candidate(cell_value: Any) -> bool:
+    """
+    Detect if a cell value looks like a label candidate.
+
+    Uses multiple heuristics to identify label-like cells that might need
+    pairing with adjacent value cells:
+    - Must be a string
+    - Must be reasonably short (< 30 characters)
+    - Bonus signals: ends with ":", contains metadata keywords
+
+    Args:
+        cell_value: Cell value to check
+
+    Returns:
+        True if cell looks like a label candidate, False otherwise
+
+    Examples:
+        >>> _is_label_candidate("Invoice Number:")
+        True
+        >>> _is_label_candidate("FROM")
+        True
+        >>> _is_label_candidate("This is a very long description that spans multiple lines and is too long")
+        False
+        >>> _is_label_candidate(12345)
+        False
+    """
+    if not isinstance(cell_value, str):
+        return False
+
+    text = cell_value.strip()
+    if not text or len(text) > 30:
+        return False
+
+    # Strong signals for label candidate:
+    # 1. Ends with colon (classic label pattern)
+    if text.endswith(":"):
+        return True
+
+    # 2. Contains metadata keywords
+    if _contains_metadata_keyword(text):
+        return True
+
+    # 3. Short text with substantial content (letters, not just numbers)
+    # This catches cases like "FROM", "TO", "DATE" without colons
+    return _is_substantial_text(text) and len(text) <= 20
+
+
+def _find_adjacent_value(
+    grid: list[list[Any]], row_idx: int, col_idx: int, radius: int = 3
+) -> tuple[Any, int] | None:
+    """
+    Search for a non-empty value cell adjacent to a label cell.
+
+    Searches to the right of the label cell within a specified radius.
+    Skips empty cells and returns the first non-empty cell found.
+
+    Args:
+        grid: 2D list of cell values (list of rows)
+        row_idx: 1-based row index of the label cell
+        col_idx: 1-based column index of the label cell
+        radius: Maximum number of cells to search to the right. Default: 3
+
+    Returns:
+        Tuple of (value, column_offset) if value found, None otherwise.
+        column_offset is the number of columns from label cell (1, 2, 3, etc.)
+
+    Examples:
+        >>> grid = [["Invoice:", "12345", None]]
+        >>> _find_adjacent_value(grid, 1, 1, radius=3)
+        ("12345", 1)
+        >>> grid = [["FROM:", None, None, "TOKYO"]]
+        >>> _find_adjacent_value(grid, 1, 1, radius=3)
+        ("TOKYO", 3)
+        >>> grid = [["TO:", None, None, None, "DUBAI"]]
+        >>> _find_adjacent_value(grid, 1, 1, radius=3)
+        None  # Value is beyond radius
+    """
+    # Convert to 0-based index for grid access
+    grid_row_idx = row_idx - 1
+
+    # Validate row exists
+    if grid_row_idx < 0 or grid_row_idx >= len(grid):
+        return None
+
+    row = grid[grid_row_idx]
+
+    # Search right from col_idx+1 up to col_idx+radius
+    for offset in range(1, radius + 1):
+        search_col_idx = col_idx + offset  # 1-based
+        grid_col_idx = search_col_idx - 1  # 0-based
+
+        # Check if column exists
+        if grid_col_idx >= len(row):
+            break  # Reached end of row
+
+        cell = row[grid_col_idx]
+
+        # Found non-empty cell
+        if cell not in (None, ""):
+            logger.debug(
+                "Found adjacent value at R%dC%d (offset=%d) for label at R%dC%d: %s",
+                row_idx,
+                search_col_idx,
+                offset,
+                row_idx,
+                col_idx,
+                cell,
+            )
+            return (cell, offset)
+
+    # No value found within radius
+    logger.debug(
+        "No adjacent value found for label at R%dC%d within radius=%d",
+        row_idx,
+        col_idx,
+        radius,
+    )
+    return None
+
+
 def _extract_label_value_from_cell(cell_value: Any) -> tuple[str | None, Any]:
     """
     Try to extract label and value from a single cell.
@@ -248,6 +369,154 @@ def _extract_label_value_from_cell(cell_value: Any) -> tuple[str | None, Any]:
 
     # No clear label pattern detected, return as value only
     return (None, text_stripped)
+
+
+def _extract_label_value_pairs(
+    grid: list[list[Any]], row_idx: int
+) -> list[tuple[str | None, Any, int, int]]:
+    """
+    Extract label-value pairs from a row, handling multi-cell patterns.
+
+    This function implements the enhanced pairing logic that can detect
+    labels and values across multiple cells. It handles:
+    1. Same-cell patterns: "Invoice: 12345" -> Existing behavior
+    2. Multi-cell patterns: "Invoice:" | "12345" -> Paired across cells
+    3. Multi-cell with gaps: "FROM:" | (empty) | "TOKYO" -> Paired with gap
+
+    Algorithm:
+    - Iterate through row cells left to right
+    - For each cell:
+      1. If already paired (as a value), skip it
+      2. Try same-cell pattern first (has colon with value)
+      3. If label candidate without value, search adjacent cells
+      4. Create appropriate label-value pair
+
+    Args:
+        grid: 2D list of cell values (list of rows)
+        row_idx: 1-based row index to process
+
+    Returns:
+        List of (label, value, row, col) tuples for all cells in the row.
+        - label can be None for value-only cells
+        - value can be None for label-only cells (no adjacent value found)
+
+    Examples:
+        >>> grid = [["Invoice:", "12345", "Date:", "2024-01-01"]]
+        >>> _extract_label_value_pairs(grid, 1)
+        [("Invoice", "12345", 1, 1), ("Date", "2024-01-01", 1, 3)]
+
+        >>> grid = [["FROM:", None, "TOKYO", "TO:", None, None, "DUBAI"]]
+        >>> _extract_label_value_pairs(grid, 1)
+        [("FROM", "TOKYO", 1, 1), ("TO", "DUBAI", 1, 4)]
+    """
+    # Convert to 0-based index for grid access
+    grid_row_idx = row_idx - 1
+
+    if grid_row_idx < 0 or grid_row_idx >= len(grid):
+        return []
+
+    row = grid[grid_row_idx]
+    pairs = []
+    paired_col_indices = set()  # Track which columns have been paired as values
+
+    for col_idx, cell in enumerate(row, start=1):
+        # Skip empty cells
+        if cell in (None, ""):
+            continue
+
+        # Skip cells already paired as values
+        if col_idx in paired_col_indices:
+            logger.debug(
+                "Skipping R%dC%d - already paired as value for another label",
+                row_idx,
+                col_idx,
+            )
+            continue
+
+        # Try same-cell pattern first (existing behavior)
+        label, value = _extract_label_value_from_cell(cell)
+
+        # Case 1: Same-cell pattern with both label and value
+        if label is not None and value is not None:
+            pairs.append((label, value, row_idx, col_idx))
+            logger.debug(
+                "Same-cell pattern at R%dC%d: label=%s, value=%s",
+                row_idx,
+                col_idx,
+                label,
+                value,
+            )
+            continue
+
+        # Case 2: Label-only from same-cell pattern (ends with ":", no value after it)
+        # Try to find adjacent value
+        if label is not None and value is None:
+            adjacent_result = _find_adjacent_value(
+                grid, row_idx, col_idx, radius=DEFAULT_ADJACENT_CELL_RADIUS
+            )
+
+            if adjacent_result:
+                adjacent_value, offset = adjacent_result
+                value_col_idx = col_idx + offset
+                pairs.append((label, adjacent_value, row_idx, col_idx))
+                paired_col_indices.add(value_col_idx)
+                logger.debug(
+                    "Multi-cell pattern at R%dC%d: label=%s, value=%s (from C%d)",
+                    row_idx,
+                    col_idx,
+                    label,
+                    adjacent_value,
+                    value_col_idx,
+                )
+            else:
+                # No adjacent value found, keep as label-only
+                pairs.append((label, None, row_idx, col_idx))
+                logger.debug(
+                    "Label-only at R%dC%d: label=%s (no adjacent value)",
+                    row_idx,
+                    col_idx,
+                    label,
+                )
+            continue
+
+        # Case 3: Not a same-cell pattern, check if it's a label candidate
+        if _is_label_candidate(cell):
+            adjacent_result = _find_adjacent_value(
+                grid, row_idx, col_idx, radius=DEFAULT_ADJACENT_CELL_RADIUS
+            )
+
+            if adjacent_result:
+                adjacent_value, offset = adjacent_result
+                value_col_idx = col_idx + offset
+                # Remove colon from label if present
+                label_text = str(cell).strip().rstrip(":")
+                pairs.append((label_text, adjacent_value, row_idx, col_idx))
+                paired_col_indices.add(value_col_idx)
+                logger.debug(
+                    "Label candidate paired at R%dC%d: label=%s, value=%s (from C%d)",
+                    row_idx,
+                    col_idx,
+                    label_text,
+                    adjacent_value,
+                    value_col_idx,
+                )
+            else:
+                # Label candidate but no adjacent value
+                label_text = str(cell).strip().rstrip(":")
+                pairs.append((label_text, None, row_idx, col_idx))
+                logger.debug(
+                    "Label candidate only at R%dC%d: label=%s (no adjacent value)",
+                    row_idx,
+                    col_idx,
+                    label_text,
+                )
+            continue
+
+        # Case 4: Not a label pattern, treat as value-only
+        pairs.append((None, cell, row_idx, col_idx))
+        logger.debug("Value-only at R%dC%d: value=%s", row_idx, col_idx, cell)
+
+    return pairs
 
 
 def _calculate_cell_density(row: list[Any]) -> float:
@@ -504,11 +773,16 @@ def _create_block_from_cluster(
         col_start = 1
         col_end = 1
 
-    # Extract label/value pairs from content
+    # Extract label/value pairs using enhanced pairing logic
+    # Process each row in the block to detect multi-cell patterns
     label_value_pairs = []
-    for row_idx, col_idx, cell in content:
-        label, value = _extract_label_value_from_cell(cell)
-        label_value_pairs.append((label, value, row_idx, col_idx))
+    processed_rows = set()
+
+    for row_idx in range(row_start, row_end + 1):
+        if row_idx not in processed_rows:
+            row_pairs = _extract_label_value_pairs(grid, row_idx)
+            label_value_pairs.extend(row_pairs)
+            processed_rows.add(row_idx)
 
     # Determine primary detection pattern
     # Check if any row had key-value patterns
