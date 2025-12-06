@@ -102,6 +102,33 @@ class OpenAIProvider(BaseAIProvider):
         content = response.choices[0].message.content
         return content or ""
 
+    def _call_batch_classify_api(self, system_message: str, user_message: str) -> str:
+        """
+        Execute OpenAI API call for batch classification.
+
+        Args:
+            system_message: System prompt for batch classification
+            user_message: User prompt with payload data
+
+        Returns:
+            Raw response text from OpenAI API
+
+        Raises:
+            OpenAI API exceptions (will be wrapped by BaseAIProvider)
+        """
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": user_message},
+            ],
+            response_format={"type": "json_object"},
+            temperature=AI_CLASSIFICATION_TEMPERATURE,
+        )
+
+        content = response.choices[0].message.content
+        return content or ""
+
     def _call_translate_api(self, system_message: str, user_message: str) -> str:
         """
         Execute OpenAI API call for translation.

@@ -107,6 +107,67 @@ class BaseAIProvider(AIProvider):
             # Wrap provider-specific exceptions
             raise self._wrap_api_error(e, "classify_fields") from e
 
+    def classify_all_fields(
+        self, payload: dict[str, Any], contexts: list[str] = None
+    ) -> dict[str, Any]:
+        """
+        Classify multiple field types in a single API request.
+
+        This template method orchestrates batch classification:
+        1. Validates all contexts
+        2. Builds combined batch prompt for all contexts
+        3. Calls provider-specific batch API (delegated to subclass)
+        4. Parses and validates the batch response
+
+        Args:
+            payload: AI payload dict from build_ai_payload()
+            contexts: List of contexts to process (default: ["headers", "columns", "line_items"])
+
+        Returns:
+            Dict with classification results keyed by context
+
+        Raises:
+            AIProviderError: On API errors, timeouts, or invalid responses
+            ValueError: If any context is not a supported value
+        """
+        # Default to all three contexts
+        if contexts is None:
+            contexts = ["headers", "columns", "line_items"]
+
+        # Validate all contexts
+        for context in contexts:
+            self._validate_context(context)
+
+        try:
+            # Build batch system prompt (shared logic)
+            system_message = self._build_batch_system_prompt(contexts)
+            user_message = self._build_batch_user_prompt(payload, contexts)
+
+            logger.debug(
+                "Sending classify_all_fields request (provider=%s, model=%s, contexts=%s)",
+                self.provider_name,
+                self.model,
+                contexts,
+            )
+
+            # Call provider-specific batch API (delegated to subclass)
+            response_text = self._call_batch_classify_api(system_message, user_message)
+
+            # Parse and validate batch response (shared logic)
+            return self._parse_and_validate_batch_response(
+                response_text, contexts, "classify_all_fields"
+            )
+
+        except AIProviderError:
+            # Re-raise our own errors
+            raise
+        except ValueError:
+            # Re-raise validation errors
+            raise
+        except Exception as e:
+            # Wrap provider-specific exceptions
+            raise self._wrap_api_error(e, "classify_all_fields") from e
+
     def translate_text(self, text: str, source_lang: str, target_lang: str = "en") -> str:
         """
         Translate text using AI.
@@ -244,6 +305,26 @@ class BaseAIProvider(AIProvider):
 
         Args:
             system_message: System prompt for classification
+            user_message: User prompt with payload data
+
+        Returns:
+            Raw response text from the API
+
+        Raises:
+            Provider-specific exceptions (will be wrapped by BaseAIProvider)
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def _call_batch_classify_api(self, system_message: str, user_message: str) -> str:
+        """
+        Execute provider-specific batch classification API call.
+
+        Subclasses must implement this method to call their specific API
+        (OpenAI, Anthropic, etc.) for batch classification and return the raw response text.
+
+        Args:
+            system_message: System prompt for batch classification
             user_message: User prompt with payload data
 
         Returns:
@@ -429,6 +510,148 @@ class BaseAIProvider(AIProvider):
             f"{serialize_to_json(payload, indent=2)}\n\n"
             "Respond with a JSON object containing your classifications."
         )
+
+    def _build_batch_system_prompt(self, contexts: list[str]) -> str:
+        """
+        Build combined system prompt for batch classification.
+
+        Args:
+            contexts: List of contexts to process
+
+        Returns:
+            Combined system prompt with instructions for all contexts
+        """
+        prompt_parts = [
+            "You are a multi-task field classification assistant for invoice templates. ",
+            "You will classify multiple types of invoice data in a single response.\n\n",
+        ]
+
+        # Add context-specific instructions
+        for context in contexts:
+            instructions = self._get_context_specific_instructions(context)
+            prompt_parts.append(f"## {context.upper()}\n{instructions}\n\n")
+
+        # Add combined response schema
+        prompt_parts.append("## RESPONSE FORMAT\n")
+        prompt_parts.append("Return a single JSON object with the following structure:\n")
+        prompt_parts.append("{\n")
+
+        for i, context in enumerate(contexts):
+            comma = "," if i < len(contexts) - 1 else ""
+            prompt_parts.append(f'  "{context}": [...]  // Array of classified items{comma}\n')
+
+        prompt_parts.append("}\n\n")
+        prompt_parts.append(
+            "All fields must be included. If a section has no items, use an empty array []."
+        )
+
+        return "".join(prompt_parts)
+
+    def _build_batch_user_prompt(self, payload: dict[str, Any], contexts: list[str]) -> str:
+        """
+        Build user prompt for batch classification.
+
+        Args:
+            payload: AI payload data
+            contexts: List of contexts to process
+
+        Returns:
+            User prompt with payload and batch instructions
+        """
+        context_list = ", ".join(contexts)
+        return (
+            f"Please classify the following invoice template data for these tasks: {context_list}\n\n"
+            f"{serialize_to_json(payload, indent=2)}\n\n"
+            "Respond with a single JSON object containing all classifications."
+        )
+
+    def _get_context_specific_instructions(self, context: str) -> str:
+        """
+        Get specific instructions for a given context.
+
+        Args:
+            context: Classification context
+
+        Returns:
+            Instruction text for the context
+        """
+        if context == "headers":
+            return (
+                "Analyze header fields and classify each field semantically.\n\n"
+                "PATTERN DETECTION:\n"
+                "1. Multi-cell patterns: Label in one cell, value in adjacent cell\n"
+                "2. Same-cell patterns: Label and value in same cell with delimiter\n\n"
+                "Required fields: raw_label, raw_value, block_index, row_index, col_index\n"
+                "Optional fields: label_col_offset, value_col_offset, pattern_type, model_confidence"
+            )
+        if context == "columns":
+            return (
+                "Analyze table columns and classify each column semantically.\n\n"
+                "Required fields: raw_label, raw_position, table_block_index, row_index, col_index, sample_values\n"
+                "Optional fields: model_confidence"
+            )
+        if context == "line_items":
+            return (
+                "Extract individual line items from table rows.\n\n"
+                "Required fields: table_index, row_index, is_subtotal, columns\n"
+                "Optional fields: model_confidence"
+            )
+        return ""
+
+    def _parse_and_validate_batch_response(
+        self, content: str, contexts: list[str], request_type: str
+    ) -> dict[str, Any]:
+        """
+        Parse and validate batch JSON response from API.
+
+        Args:
+            content: Raw response text from API
+            contexts: List of expected contexts
+            request_type: Type of request (for error messages)
+
+        Returns:
+            Parsed and validated JSON dict with all expected context keys
+
+        Raises:
+            AIProviderError: If response is empty, invalid JSON, or missing expected keys
+        """
+        if not content:
+            raise AIProviderError(
+                provider_name=self.provider_name,
+                error_details="Empty response from API",
+                request_type=request_type,
+            )
+
+        try:
+            # Try parsing directly first
+            result = json.loads(content)
+            logger.debug("Successfully parsed batch JSON response")
+        except json.JSONDecodeError as e:
+            # If direct parsing fails, try to extract JSON from text with preamble
+            json_start = content.find("{")
+            if json_start > 0:
+                try:
+                    result = json.loads(content[json_start:])
+                    logger.debug("Successfully parsed batch JSON after stripping preamble")
+                except json.JSONDecodeError:
+                    pass  # Fall through to original error
+
+            raise AIProviderError(
+                provider_name=self.provider_name,
+                error_details=f"Invalid JSON in batch response: {str(e)}",
+                request_type=request_type,
+            ) from e
+
+        # Validate all expected context keys are present
+        missing_keys = [ctx for ctx in contexts if ctx not in result]
+        if missing_keys:
+            raise AIProviderError(
+                provider_name=self.provider_name,
+                error_details=f"Batch response missing expected keys: {missing_keys}",
+                request_type=request_type,
+            )
+
+        return result
 
     def _get_expected_response_key(self, context: str) -> str:
         """

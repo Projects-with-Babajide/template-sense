@@ -142,6 +142,48 @@ class AIProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def classify_all_fields(
+        self, payload: dict[str, Any], contexts: list[str] = None
+    ) -> dict[str, Any]:
+        """
+        Classify multiple field types in a single API request.
+
+        This batch method combines classification for headers, columns, and line_items
+        into a single API call, reducing network overhead and latency.
+
+        Args:
+            payload: Structured data containing fields/columns to classify
+                Expected structure defined by ai_payload_schema module
+            contexts: List of contexts to process (default: ["headers", "columns", "line_items"])
+                Each context must be one of: "headers", "columns", "line_items"
+
+        Returns:
+            Dict with classification results keyed by context:
+            {
+                "headers": [...],       # List of classified header fields
+                "columns": [...],       # List of classified table columns
+                "line_items": [...]     # List of extracted line items
+            }
+
+        Raises:
+            AIProviderError: If the API request fails or returns invalid data
+            ValueError: If contexts contains invalid context strings
+
+        Example:
+            >>> payload = {
+            ...     "header_fields": [...],
+            ...     "table_blocks": [...]
+            ... }
+            >>> result = provider.classify_all_fields(
+            ...     payload,
+            ...     contexts=["headers", "columns", "line_items"]
+            ... )
+            >>> print(len(result["headers"]))
+            5
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def translate_text(self, text: str, source_lang: str, target_lang: str = "en") -> str:
         """
         Translate text from source language to target language.
