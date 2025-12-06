@@ -395,14 +395,14 @@ def test_aggregate_recovery_events_empty_list():
 
     assert result == {
         "total_events": 0,
-        "by_severity": {"info": 0, "warning": 0, "error": 0},
+        "by_severity": {"warning": 0, "error": 0},
         "by_stage": {},
         "events": [],
     }
 
 
 def test_aggregate_recovery_events_mixed_severities():
-    """Mixed severities should be counted correctly."""
+    """Mixed severities should be counted correctly, INFO events filtered out."""
     events = [
         RecoveryEvent(
             severity=RecoverySeverity.INFO,
@@ -428,9 +428,10 @@ def test_aggregate_recovery_events_mixed_severities():
 
     result = aggregate_recovery_events(events)
 
-    assert result["total_events"] == 4
-    assert result["by_severity"] == {"info": 1, "warning": 2, "error": 1}
-    assert len(result["events"]) == 4
+    # INFO events should be filtered out, only WARNING and ERROR counted
+    assert result["total_events"] == 3
+    assert result["by_severity"] == {"warning": 2, "error": 1}
+    assert len(result["events"]) == 3
 
 
 def test_aggregate_recovery_events_multiple_stages():
@@ -486,6 +487,35 @@ def test_aggregate_recovery_events_serialization():
     assert event_dict["field_identifier"] == "test_field"
     assert event_dict["confidence_score"] == 0.4
     assert event_dict["metadata"] == {"key": "value"}
+
+
+def test_aggregate_recovery_events_filters_info_only():
+    """Verify that only INFO events are completely filtered out."""
+    events = [
+        RecoveryEvent(
+            severity=RecoverySeverity.INFO,
+            stage="ai_classification",
+            message="Info message 1",
+        ),
+        RecoveryEvent(
+            severity=RecoverySeverity.INFO,
+            stage="ai_classification",
+            message="Info message 2",
+        ),
+        RecoveryEvent(
+            severity=RecoverySeverity.INFO,
+            stage="fuzzy_matching",
+            message="Info message 3",
+        ),
+    ]
+
+    result = aggregate_recovery_events(events)
+
+    # All INFO events should be filtered out
+    assert result["total_events"] == 0
+    assert result["by_severity"] == {"warning": 0, "error": 0}
+    assert result["by_stage"] == {}
+    assert result["events"] == []
 
 
 def test_aggregate_recovery_events_json_serializable():
