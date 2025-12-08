@@ -67,12 +67,12 @@ class TestOpenAIProviderInitialization:
             assert provider.model == "gpt-3.5-turbo"
 
     def test_model_property_defaults_to_gpt4(self):
-        """Test model property defaults to gpt-4 when not configured."""
+        """Test model property defaults to gpt-4o when not configured."""
         config = AIConfig(provider="openai", api_key="sk-test-key")
 
         with patch("template_sense.ai_providers.openai_provider.OpenAI"):
             provider = OpenAIProvider(config)
-            assert provider.model == "gpt-4"
+            assert provider.model == "gpt-4o"
 
 
 class TestOpenAIProviderClassifyFields:

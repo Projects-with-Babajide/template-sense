@@ -119,7 +119,7 @@ class TestGetAIProvider:
         with patch("template_sense.ai_providers.openai_provider.OpenAI"):
             provider = get_ai_provider(config)
             assert provider.provider_name == "openai"
-            assert provider.model == "gpt-4"  # Default model
+            assert provider.model == "gpt-4o"  # Default model
 
     def test_factory_default_parameter_is_none(self):
         """Test that calling factory without args defaults to config=None."""

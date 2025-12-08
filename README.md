@@ -6,24 +6,24 @@ Template Sense analyzes Excel-based invoice templates using heuristics and AI to
 
 ## Installation
 
-### From GitHub (Recommended)
-
-```bash
-# Latest release
-pip install git+https://github.com/Projects-with-Babajide/template-sense.git@main
-
-# Specific release tag
-pip install git+https://github.com/Projects-with-Babajide/template-sense.git@v0.1.0
-```
-
-### From PyPI
+### From PyPI (Recommended)
 
 ```bash
 # Latest version
 pip install template-sense
 
 # Specific version
-pip install template-sense==0.1.0
+pip install template-sense==0.1.1
+```
+
+### From GitHub
+
+```bash
+# Latest release
+pip install git+https://github.com/Projects-with-Babajide/template-sense.git@main
+
+# Specific release tag
+pip install git+https://github.com/Projects-with-Babajide/template-sense.git@v0.1.1
 ```
 
 ### For Development
