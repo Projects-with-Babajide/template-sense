@@ -56,7 +56,7 @@ LOG_LEVEL_ENV_VAR = "TEMPLATE_SENSE_LOG_LEVEL"
 SUPPORTED_AI_PROVIDERS = ("openai", "anthropic")
 
 # Default AI models
-DEFAULT_OPENAI_MODEL = "gpt-4"
+DEFAULT_OPENAI_MODEL = "gpt-4o"
 DEFAULT_ANTHROPIC_MODEL = "claude-3-sonnet-20240229"
 
 # AI temperature settings

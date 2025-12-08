@@ -242,9 +242,17 @@ pytest
 ```
 
 ### Code Quality Tools
+**IMPORTANT:** Always activate the virtual environment before running any Python commands:
+```bash
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```
+
 - **Black:** `black .`
 - **Ruff:** `ruff check .`
 - **Pytest:** `pytest`
+- **Import verification:** `python -c "from template_sense.analyzer import extract_template_structure; print('✓ Import successful')"`
+
+All Python commands, test runs, and package operations MUST be executed within the activated virtual environment.
 
 ### Git Workflow
 - Main branch: `main`
